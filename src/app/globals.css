@@ -1,6 +1,6 @@
 :root {
   --bg: #10120f;
-  --panel: rgba(247, 244, 235, 0.9);
+  --panel: rgba(247, 244, 235, 0.84);
   --panel-strong: #fbf7ec;
   --ink: #17201d;
   --muted: #66706b;
@@ -53,6 +53,14 @@ button {
   background: #10120f;
 }
 
+.glass-panel {
+  border-color: rgba(255, 255, 255, 0.28);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(241, 238, 227, 0.76)),
+    var(--panel);
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
 .world-canvas {
   position: fixed;
   inset: 0;
@@ -89,6 +97,17 @@ button {
 .brand-panel {
   border-radius: 8px;
   padding: 12px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
 .brand-panel h1 {
@@ -187,6 +206,34 @@ button {
   padding: 14px;
 }
 
+.voice-module {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 12px;
+  border: 1px solid rgba(43, 140, 115, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.54);
+  padding: 11px;
+}
+
+.voice-module strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 15px;
+}
+
+.voice-module p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.voice-module .action-button {
+  min-width: 128px;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
@@ -225,6 +272,7 @@ button {
 
 .action-button {
   min-height: 36px;
+  white-space: nowrap;
   padding: 8px 11px;
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.55);
@@ -283,6 +331,21 @@ button {
 .person-card.near {
   border-color: rgba(43, 140, 115, 0.7);
   background: rgba(43, 140, 115, 0.13);
+}
+
+.person-card.audible {
+  border-color: rgba(61, 120, 165, 0.62);
+  background: rgba(61, 120, 165, 0.12);
+}
+
+.voice-on {
+  background: rgba(61, 120, 165, 0.18);
+  color: #20577a;
+}
+
+.speaking-pill {
+  background: rgba(43, 140, 115, 0.18);
+  color: #17614f;
 }
 
 .person-card strong {
@@ -477,6 +540,118 @@ button {
   box-shadow: 0 0 0 2px rgba(43, 140, 115, 0.72);
 }
 
+.game-map {
+  width: 204px;
+  height: 204px;
+  padding: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(8, 14, 17, 0.72);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.game-map canvas {
+  display: block;
+  width: 184px;
+  height: 184px;
+  border-radius: 999px;
+}
+
+.game-map .mini-map-header {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  margin: 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: rgba(8, 14, 17, 0.58);
+  color: #f6f3e9;
+  backdrop-filter: blur(10px);
+}
+
+.game-map .mini-map-header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(246, 243, 233, 0.76);
+}
+
+.compass {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 9px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.compass.north {
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.compass.south {
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.compass.east {
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+}
+
+.compass.west {
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+}
+
+.action-hud {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 22;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(12, 18, 19, 0.66);
+  color: rgba(255, 255, 255, 0.72);
+  padding: 8px 14px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 14px 48px rgba(0, 0, 0, 0.34);
+  font-size: 11px;
+}
+
+.action-hud kbd {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  font-family: inherit;
+  font-weight: 700;
+  padding: 3px 7px;
+}
+
+.connection-note {
+  position: fixed;
+  left: 236px;
+  bottom: 20px;
+  z-index: 17;
+  display: inline-flex;
+  max-width: min(420px, calc(100vw - 500px));
+  align-items: center;
+  gap: 7px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+
 .world-label {
   display: grid;
   gap: 2px;
@@ -532,6 +707,23 @@ button {
   font-size: 11px;
 }
 
+.world-label.name em {
+  display: block;
+  color: rgba(255, 253, 245, 0.82);
+  font-size: 9px;
+  font-style: normal;
+}
+
+.world-label.name.speaking {
+  border-color: rgba(111, 214, 180, 0.82);
+  background: rgba(23, 32, 29, 0.88);
+  box-shadow: 0 0 18px rgba(87, 218, 175, 0.32);
+}
+
+.world-label.name.audible {
+  border-color: rgba(143, 190, 220, 0.72);
+}
+
 @media (max-width: 900px) {
   .topbar {
     grid-template-columns: 1fr;
@@ -565,6 +757,21 @@ button {
 
   .mini-map {
     width: 160px;
+  }
+
+  .game-map {
+    width: 156px;
+    height: 156px;
+  }
+
+  .game-map canvas {
+    width: 136px;
+    height: 136px;
+  }
+
+  .action-hud,
+  .connection-note {
+    display: none;
   }
 
   .conversation-dock {

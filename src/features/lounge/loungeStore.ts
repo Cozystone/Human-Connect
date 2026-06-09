@@ -4,6 +4,7 @@ import { create } from "zustand";
 import type { LoungeId, Vector3Tuple } from "./loungeData";
 
 type ConversationMode = "floor" | "table" | "private";
+type NetworkMode = "simulation" | "realtime-ready";
 
 type LoungeState = {
   loungeId: LoungeId;
@@ -12,13 +13,17 @@ type LoungeState = {
   currentTableId: string | null;
   privateGuestId: string | null;
   playerPosition: Vector3Tuple;
+  playerHeading: number;
+  isJumping: boolean;
   muted: boolean;
   blockedGuestIds: string[];
   toast: string | null;
   mode: ConversationMode;
+  networkMode: NetworkMode;
   setLounge: (loungeId: LoungeId) => void;
   enterAsGuest: (nickname: string, interests: string[]) => void;
-  setPlayerPosition: (position: Vector3Tuple) => void;
+  setPlayerPose: (position: Vector3Tuple, heading: number) => void;
+  setPlayerJumping: (isJumping: boolean) => void;
   joinTable: (tableId: string) => void;
   leaveTable: () => void;
   requestPrivate: (guestId: string, guestName: string) => void;
@@ -37,37 +42,38 @@ export const useLoungeStore = create<LoungeState>((set, get) => ({
   currentTableId: null,
   privateGuestId: null,
   playerPosition: [0, 0, 7],
+  playerHeading: 0,
+  isJumping: false,
   muted: false,
   blockedGuestIds: [],
-  toast: "하나의 도시 안에 창업, 개발, 디자인 구역이 열려 있습니다. WASD로 걸어보세요.",
+  toast: "현재는 시뮬레이션 모드입니다. 실제 접속자 동기화와 음성은 WebRTC/Realtime 어댑터를 연결하면 활성화됩니다.",
   mode: "floor",
+  networkMode: "realtime-ready",
   setLounge: (loungeId) =>
     set({
       loungeId,
-      currentTableId: null,
-      privateGuestId: null,
-      mode: "floor",
       toast: "선택한 구역 정보를 열었습니다. 미니맵을 보며 직접 걸어가 보세요."
     }),
   enterAsGuest: (nickname, interests) =>
     set({
       nickname: nickname.trim() || "익명 빌더",
       interests: interests.length ? interests : ["관심사"],
-      toast: "게스트 프로필을 저장했습니다. 도시 안에서는 가까운 사람과 테이블이 먼저 열립니다."
+      toast: "게스트 프로필을 저장했습니다. 가까운 사람과 테이블이 먼저 열립니다."
     }),
-  setPlayerPosition: (playerPosition) => set({ playerPosition }),
+  setPlayerPose: (playerPosition, playerHeading) => set({ playerPosition, playerHeading }),
+  setPlayerJumping: (isJumping) => set({ isJumping }),
   joinTable: (tableId) =>
     set({
       currentTableId: tableId,
       privateGuestId: null,
       mode: "table",
-      toast: "테이블에 착석했습니다. 같은 주제를 바라보는 사람들과 대화를 시작하세요."
+      toast: "의자에 앉았습니다. 같은 주제를 바라보는 사람들과 대화를 시작하세요."
     }),
   leaveTable: () =>
     set({
       currentTableId: null,
       mode: "floor",
-      toast: "테이블에서 일어났습니다. 다른 구역으로 걸어가도 됩니다."
+      toast: "자리에서 일어났습니다. 다른 구역으로 이동할 수 있습니다."
     }),
   requestPrivate: (guestId, guestName) => {
     if (get().blockedGuestIds.includes(guestId)) {

@@ -1,7 +1,7 @@
 "use client";
 
-import { Flag, Hand, Map, Mic, MicOff, Shield, UserRound, Users, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Flag, Hand, Map, Mic, MicOff, Radio, Shield, UserRound, Users, Volume2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { allGuests, allTables, getLounge, getLoungeForTable, lounges, type Guest, type Lounge } from "./loungeData";
 import { useLoungeStore } from "./loungeStore";
@@ -9,12 +9,15 @@ import { LoungeWorld } from "./LoungeWorld";
 
 const NEAR_GUEST_RADIUS = 5.2;
 const NEAR_TABLE_RADIUS = 6.8;
+const BASE_VOICE_RADIUS = 10;
 const MAP_LIMIT = 92;
+const MINIMAP_SIZE = 184;
 
 export function HumanConnectApp() {
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
   const [nameDraft, setNameDraft] = useState("익명 빌더");
   const [interestDraft, setInterestDraft] = useState("창업, 디자인, AI");
+  const [voiceTick, setVoiceTick] = useState(0);
   const {
     loungeId,
     nickname,
@@ -22,9 +25,12 @@ export function HumanConnectApp() {
     currentTableId,
     privateGuestId,
     playerPosition,
+    playerHeading,
+    isJumping,
     muted,
     toast,
     mode,
+    networkMode,
     setLounge,
     enterAsGuest,
     joinTable,
@@ -43,15 +49,21 @@ export function HumanConnectApp() {
   const currentTableDistrict = currentTable ? getLoungeForTable(currentTable.id) : null;
   const privateGuest = allGuests.find((guest) => guest.id === privateGuestId);
   const focusedTables = activeDistrict.tables;
+  const crowdCount = useMemo(() => getCrowdCount(playerPosition), [playerPosition]);
+  const voiceRadius = getVoiceRadius(crowdCount);
 
-  const nearestDistrict = useMemo(() => getNearestDistrict(playerPosition), [playerPosition]);
   const nearbyGuests = useMemo(
     () =>
       allGuests
-        .map((guest) => ({ guest, distance: planarDistance(playerPosition, guest.position) }))
+        .map((guest, index) => ({
+          guest,
+          distance: planarDistance(playerPosition, guest.position),
+          speaking: isGuestSpeaking(index, voiceTick)
+        }))
         .sort((a, b) => a.distance - b.distance),
-    [playerPosition]
+    [playerPosition, voiceTick]
   );
+  const audibleGuests = nearbyGuests.filter((item) => !muted && item.distance <= voiceRadius);
   const closestGuest = nearbyGuests.find((item) => item.distance <= NEAR_GUEST_RADIUS);
   const closestTable = useMemo(
     () =>
@@ -61,6 +73,12 @@ export function HumanConnectApp() {
         .find((item) => item.distance <= NEAR_TABLE_RADIUS),
     [playerPosition]
   );
+  const nearestDistrict = useMemo(() => getNearestDistrict(playerPosition), [playerPosition]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setVoiceTick((tick) => tick + 1), 900);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -84,12 +102,13 @@ export function HumanConnectApp() {
       </div>
 
       <header className="topbar">
-        <section className="brand-panel" aria-label="Human Connect">
+        <section className="brand-panel glass-panel" aria-label="Human Connect">
+          <span className="eyebrow">Open City Social</span>
           <h1>Human Connect</h1>
           <p>하나의 도시 안에서 관심사가 맞는 사람들이 우연히 만나 진짜 대화를 시작합니다.</p>
         </section>
 
-        <nav className="lounge-tabs" aria-label="도시 구역 선택">
+        <nav className="lounge-tabs glass-panel" aria-label="도시 구역 선택">
           {lounges.map((item) => (
             <button
               className={`tab-button ${item.id === activeDistrict.id ? "active" : ""}`}
@@ -104,15 +123,15 @@ export function HumanConnectApp() {
           ))}
         </nav>
 
-        <section className="status-panel" aria-label="세션 상태">
+        <section className="status-panel glass-panel" aria-label="세션 상태">
           <div className="status-grid">
             <div>
               <span>상태</span>
               <strong>{getModeLabel(mode)}</strong>
             </div>
             <div>
-              <span>도시 인원</span>
-              <strong>{allGuests.length + 1}</strong>
+              <span>접속 구조</span>
+              <strong>{networkMode === "realtime-ready" ? "준비됨" : "시뮬레이션"}</strong>
             </div>
             <div>
               <span>마이크</span>
@@ -122,26 +141,54 @@ export function HumanConnectApp() {
         </section>
       </header>
 
-      <aside className="side-panel" aria-label="도시 조작 패널">
+      <aside className="side-panel glass-panel" aria-label="도시 조작 패널">
         <div className="panel-header">
           <div>
+            <span className="eyebrow">{activeDistrict.districtName}</span>
             <h2>{activeDistrict.name}</h2>
-            <p>{activeDistrict.districtName} · {activeDistrict.tone}</p>
+            <p>{activeDistrict.tone}</p>
           </div>
           <button className="icon-button" onClick={() => wave()} type="button" title="손 흔들기">
             <Hand size={18} aria-hidden />
           </button>
         </div>
 
-        <div className="control-row">
+        <div className="voice-module">
+          <div>
+            <span className="eyebrow">Proximity Voice</span>
+            <strong>{muted ? "음성 송출 꺼짐" : `${audibleGuests.length}명 들림`}</strong>
+            <p>기본 {BASE_VOICE_RADIUS}m · 밀집도 {crowdCount}명 · 현재 {voiceRadius}m</p>
+          </div>
           <button className="action-button" onClick={toggleMute} type="button">
             {muted ? <MicOff size={16} aria-hidden /> : <Mic size={16} aria-hidden />}
             {muted ? "마이크 켜기" : "마이크 끄기"}
           </button>
+        </div>
+
+        <div className="nearby-card">
+          <strong>
+            {closestGuest
+              ? `${closestGuest.guest.name}님이 근처에 있습니다`
+              : closestTable
+                ? `${closestTable.table.label} 의자 근처입니다`
+                : `${nearestDistrict.name} 방향을 지나고 있습니다`}
+          </strong>
+          <span>
+            {currentTable
+              ? "E 키를 누르면 자리에서 일어납니다."
+              : closestGuest
+                ? "E 키로 사람 카드를 열고, 가까우면 음성이 들립니다."
+                : closestTable
+                  ? "E 키를 누르면 가까운 의자에 앉습니다."
+                  : "W/S 전후진, A/D 회전, Space 점프, E 상호작용입니다."}
+          </span>
+        </div>
+
+        <div className="control-row">
           {currentTable ? (
-            <button className="action-button" onClick={leaveTable} type="button">
+            <button className="action-button primary" onClick={leaveTable} type="button">
               <X size={16} aria-hidden />
-              테이블 떠나기
+              자리에서 일어나기
             </button>
           ) : null}
           {privateGuest ? (
@@ -150,23 +197,6 @@ export function HumanConnectApp() {
               포드 떠나기
             </button>
           ) : null}
-        </div>
-
-        <div className="nearby-card">
-          <strong>
-            {closestGuest
-              ? `${closestGuest.guest.name}님이 근처에 있습니다`
-              : closestTable
-                ? `${closestTable.table.label} 근처에 있습니다`
-                : `${nearestDistrict.name} 방향을 지나고 있습니다`}
-          </strong>
-          <span>
-            {closestGuest
-              ? "E 키를 누르거나 카드를 열어 손 흔들기, 1:1 포드 요청, 신고, 차단을 할 수 있습니다."
-              : closestTable
-                ? "E 키를 누르거나 테이블 카드를 클릭하면 해당 주제 대화에 착석합니다."
-                : "창업, 개발, 디자인 구역이 한 맵에 있습니다. 미니맵을 보며 관심 구역으로 이동하세요."}
-          </span>
         </div>
 
         <h3 className="section-title">선택 구역 테이블</h3>
@@ -183,40 +213,45 @@ export function HumanConnectApp() {
                 <p>{table.topic}</p>
                 <div className="table-meta">
                   <span className="pill">{table.occupied}/{table.seats} 착석</span>
-                  <span className="pill">{activeDistrict.districtName}</span>
+                  <span className="pill">E 앉기</span>
                 </div>
               </div>
             </button>
           ))}
         </div>
 
-        <h3 className="section-title">도시 근처 사람들</h3>
+        <h3 className="section-title">근접 음성 채널</h3>
         <div className="people-list">
-          {nearbyGuests.slice(0, 6).map(({ guest, distance }) => (
-            <button
-              className={`person-card ${distance <= NEAR_GUEST_RADIUS ? "near" : ""}`}
-              key={guest.id}
-              onClick={() => setSelectedGuest(guest)}
-              type="button"
-            >
-              <strong>{guest.name}</strong>
-              <span>{getLounge(guest.loungeId).name} · {guest.role}</span>
-              <div className="person-meta">
-                <span className="pill">{distance.toFixed(1)}m</span>
-                {guest.interests.map((interest) => (
-                  <span className="pill" key={interest}>
-                    {interest}
-                  </span>
-                ))}
-              </div>
-            </button>
-          ))}
+          {nearbyGuests.slice(0, 6).map(({ guest, distance, speaking }) => {
+            const audible = !muted && distance <= voiceRadius;
+            return (
+              <button
+                className={`person-card ${distance <= NEAR_GUEST_RADIUS ? "near" : ""} ${audible ? "audible" : ""}`}
+                key={guest.id}
+                onClick={() => setSelectedGuest(guest)}
+                type="button"
+              >
+                <strong>{guest.name}</strong>
+                <span>{getLounge(guest.loungeId).name} · {guest.role}</span>
+                <div className="person-meta">
+                  <span className="pill">{distance.toFixed(1)}m</span>
+                  <span className={`pill ${audible ? "voice-on" : ""}`}>{audible ? "들림" : "멀어짐"}</span>
+                  {speaking && audible ? <span className="pill speaking-pill">말하는 중</span> : null}
+                </div>
+              </button>
+            );
+          })}
         </div>
       </aside>
 
-      <MiniMap activeDistrict={activeDistrict} playerPosition={playerPosition} />
+      <GameMinimap
+        activeDistrict={activeDistrict}
+        playerHeading={playerHeading}
+        playerPosition={playerPosition}
+        voiceRadius={voiceRadius}
+      />
 
-      <section className="entry-panel" aria-label="게스트 프로필">
+      <section className="entry-panel glass-panel" aria-label="게스트 프로필">
         <div className="panel-header">
           <div>
             <h2>{nickname}</h2>
@@ -225,12 +260,7 @@ export function HumanConnectApp() {
           <UserRound size={22} aria-hidden />
         </div>
         <div className="entry-form">
-          <input
-            aria-label="닉네임"
-            value={nameDraft}
-            onChange={(event) => setNameDraft(event.target.value)}
-            placeholder="닉네임"
-          />
+          <input aria-label="닉네임" value={nameDraft} onChange={(event) => setNameDraft(event.target.value)} placeholder="닉네임" />
           <input
             aria-label="관심사"
             value={interestDraft}
@@ -243,8 +273,15 @@ export function HumanConnectApp() {
         </div>
       </section>
 
+      <section className="action-hud" aria-label="조작 HUD">
+        <kbd>W/S</kbd><span>전후진</span>
+        <kbd>A/D</kbd><span>회전</span>
+        <kbd>Space</kbd><span>{isJumping ? "점프 중" : "점프"}</span>
+        <kbd>E</kbd><span>{currentTable ? "일어나기" : closestTable ? "앉기" : "상호작용"}</span>
+      </section>
+
       {selectedGuest ? (
-        <section className="conversation-dock" aria-label="선택한 사람">
+        <section className="conversation-dock glass-panel" aria-label="선택한 사람">
           <div>
             <strong>{selectedGuest.name}</strong>
             <span>{getLounge(selectedGuest.loungeId).name} · {selectedGuest.role} · {selectedGuest.interests.join(", ")}</span>
@@ -274,10 +311,10 @@ export function HumanConnectApp() {
       ) : null}
 
       {currentTable ? (
-        <section className="conversation-dock" aria-live="polite">
+        <section className="conversation-dock glass-panel" aria-live="polite">
           <div>
             <strong>{currentTable.label}</strong>
-            <span>{currentTableDistrict?.name ?? "도시"} · {currentTable.topic}</span>
+            <span>{currentTableDistrict?.name ?? "도시"} · 의자에 앉아 있습니다 · {currentTable.topic}</span>
           </div>
           <button className="seat-button active" onClick={leaveTable} type="button">
             착석 중
@@ -286,7 +323,7 @@ export function HumanConnectApp() {
       ) : null}
 
       {privateGuest ? (
-        <section className="conversation-dock" aria-live="polite">
+        <section className="conversation-dock glass-panel" aria-live="polite">
           <div>
             <strong>{privateGuest.name}님과의 1:1 포드</strong>
             <span>상호 동의 공간 · 음성 분리 · 언제든 나가기 가능</span>
@@ -297,52 +334,136 @@ export function HumanConnectApp() {
         </section>
       ) : null}
 
-      <div className="hud-help">W/S 전후진 · A/D 방향 전환 · 화살표 시점 전환 후 자동 복귀 · E 근접 상호작용 · Space 손 흔들기</div>
-      {toast ? <div className="toast">{toast}</div> : null}
+      <div className="connection-note">
+        <Radio size={14} aria-hidden />
+        현재 화면은 실시간 접속 구조 준비 상태이며, 실제 다중 접속/음성은 Realtime + WebRTC 서버 연결이 필요합니다.
+      </div>
+      {toast ? <div className="toast glass-panel">{toast}</div> : null}
     </main>
   );
 }
 
-function MiniMap({ activeDistrict, playerPosition }: { activeDistrict: Lounge; playerPosition: [number, number, number] }) {
-  const toMapStyle = (x: number, z: number) => ({
-    left: `${((x + MAP_LIMIT) / (MAP_LIMIT * 2)) * 100}%`,
-    top: `${((MAP_LIMIT - z) / (MAP_LIMIT * 2)) * 100}%`
-  });
+function GameMinimap({
+  activeDistrict,
+  playerHeading,
+  playerPosition,
+  voiceRadius
+}: {
+  activeDistrict: Lounge;
+  playerHeading: number;
+  playerPosition: [number, number, number];
+  voiceRadius: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const scale = MINIMAP_SIZE / (MAP_LIMIT * 2);
+    const toMap = (x: number, z: number) => ({
+      x: (x + MAP_LIMIT) * scale,
+      y: (MAP_LIMIT - z) * scale
+    });
+
+    ctx.clearRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+
+    const bg = ctx.createRadialGradient(MINIMAP_SIZE / 2, MINIMAP_SIZE / 2, 16, MINIMAP_SIZE / 2, MINIMAP_SIZE / 2, MINIMAP_SIZE / 2);
+    bg.addColorStop(0, "#52695f");
+    bg.addColorStop(0.55, "#394e45");
+    bg.addColorStop(1, "#24312d");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= MINIMAP_SIZE; i += 23) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, MINIMAP_SIZE);
+      ctx.moveTo(0, i);
+      ctx.lineTo(MINIMAP_SIZE, i);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = "rgba(235,238,232,0.55)";
+    ctx.lineWidth = 4;
+    [-72, -36, 0, 36, 72].forEach((line) => {
+      const a = toMap(line, -MAP_LIMIT);
+      const b = toMap(line, MAP_LIMIT);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+
+      const c = toMap(-MAP_LIMIT, line);
+      const d = toMap(MAP_LIMIT, line);
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.lineTo(d.x, d.y);
+      ctx.stroke();
+    });
+
+    lounges.forEach((lounge) => {
+      const point = toMap(lounge.center[0], lounge.center[2]);
+      ctx.fillStyle = `${lounge.accent}55`;
+      ctx.strokeStyle = lounge.id === activeDistrict.id ? "#ffffff" : `${lounge.accent}bb`;
+      ctx.lineWidth = lounge.id === activeDistrict.id ? 2 : 1;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, lounge.radius * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    allTables.forEach((table) => {
+      const point = toMap(table.position[0], table.position[2]);
+      ctx.fillStyle = table.color;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    const player = toMap(playerPosition[0], playerPosition[2]);
+    ctx.fillStyle = "rgba(96, 208, 180, 0.14)";
+    ctx.strokeStyle = "rgba(96, 208, 180, 0.42)";
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, voiceRadius * scale, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(playerHeading);
+    ctx.fillStyle = "rgba(255,255,255,0.34)";
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, 20, -0.5, 0.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = "#2b8c73";
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 4.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+  }, [activeDistrict, playerHeading, playerPosition, voiceRadius]);
 
   return (
-    <section className="mini-map" aria-label="도시 미니맵">
+    <section className="mini-map game-map" aria-label="도시 미니맵">
+      <canvas ref={canvasRef} width={MINIMAP_SIZE} height={MINIMAP_SIZE} />
+      <span className="compass north">N</span>
+      <span className="compass east">E</span>
+      <span className="compass south">S</span>
+      <span className="compass west">W</span>
       <div className="mini-map-header">
         <strong>도시 미니맵</strong>
-        <span>{activeDistrict.name}</span>
-      </div>
-      <div className="mini-map-canvas">
-        <span className="map-road vertical" />
-        <span className="map-road horizontal" />
-        {lounges.map((lounge) => (
-          <button
-            className={`map-district ${lounge.id === activeDistrict.id ? "active" : ""}`}
-            key={lounge.id}
-            onClick={() => useLoungeStore.getState().setLounge(lounge.id)}
-            style={{
-              ...toMapStyle(lounge.center[0], lounge.center[2]),
-              width: `${(lounge.radius / MAP_LIMIT) * 100}%`,
-              height: `${(lounge.radius / MAP_LIMIT) * 100}%`,
-              "--district": lounge.accent
-            } as CSSProperties}
-            type="button"
-            title={lounge.name}
-          >
-            <span>{lounge.name.replace(" 구역", "")}</span>
-          </button>
-        ))}
-        {allTables.map((table) => (
-          <span
-            className="map-table"
-            key={table.id}
-            style={{ ...toMapStyle(table.position[0], table.position[2]), background: table.color }}
-          />
-        ))}
-        <span className="map-player" style={toMapStyle(playerPosition[0], playerPosition[2])} />
+        <span><Volume2 size={12} aria-hidden /> {voiceRadius}m</span>
       </div>
     </section>
   );
@@ -354,6 +475,18 @@ function planarDistance(a: [number, number, number], b: [number, number, number]
   return Math.sqrt(dx * dx + dz * dz);
 }
 
+function getCrowdCount(position: [number, number, number]) {
+  return allGuests.filter((guest) => planarDistance(position, guest.position) <= 18).length;
+}
+
+function getVoiceRadius(crowdCount: number) {
+  return BASE_VOICE_RADIUS + Math.min(12, Math.max(0, crowdCount - 2) * 3);
+}
+
+function isGuestSpeaking(index: number, tick: number) {
+  return (tick + index) % 4 === 0;
+}
+
 function getNearestDistrict(position: [number, number, number]) {
   return lounges
     .map((lounge) => ({ lounge, distance: planarDistance(position, lounge.center) }))
@@ -361,7 +494,7 @@ function getNearestDistrict(position: [number, number, number]) {
 }
 
 function getModeLabel(mode: string) {
-  if (mode === "table") return "테이블";
+  if (mode === "table") return "착석";
   if (mode === "private") return "1:1";
-  return "광장";
+  return "이동 중";
 }

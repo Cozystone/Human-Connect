@@ -4,7 +4,7 @@ import { Cloud, Environment, Float, Html, Sky, Stars } from "@react-three/drei";
 import { Canvas, ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import type { Guest, Lounge, TopicTable, Vector3Tuple } from "./loungeData";
+import { allGuests, type Guest, type Lounge, type TopicTable, type Vector3Tuple } from "./loungeData";
 import { useLoungeStore } from "./loungeStore";
 
 type LoungeWorldProps = {
@@ -17,6 +17,9 @@ const keys = new Set<string>();
 const WORLD_LIMIT = 92;
 const INTERACTION_RADIUS = 5.2;
 const PLAYER_RADIUS = 0.55;
+const BASE_VOICE_RADIUS = 10;
+const JUMP_POWER = 5.8;
+const GRAVITY = 16;
 
 type Collider = {
   x: number;
@@ -241,29 +244,31 @@ export function LoungeWorld({ activeLounge, lounges, onSelectGuest }: LoungeWorl
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
       }}
     >
-      <color attach="background" args={["#9bb8c3"]} />
-      <fog attach="fog" args={["#8ba2ad", 55, 190]} />
+      <color attach="background" args={["#a9c7d5"]} />
+      <fog attach="fog" args={["#a0b7c0", 95, 245]} />
       <Sky
         distance={4500}
-        sunPosition={[120, 80, 60]}
-        turbidity={4.2}
-        rayleigh={1.55}
+        sunPosition={[160, 120, 70]}
+        turbidity={3.35}
+        rayleigh={1.85}
         mieCoefficient={0.006}
-        mieDirectionalG={0.86}
+        mieDirectionalG={0.9}
       />
-      <Stars radius={900} depth={60} count={2200} factor={3.5} fade speed={0.15} />
-      <ambientLight intensity={0.36} color="#b3c7d6" />
-      <hemisphereLight args={["#b9d5e2", "#354335", 0.72]} />
+      <Stars radius={1200} depth={80} count={900} factor={2.4} fade speed={0.08} />
+      <ambientLight intensity={0.32} color="#bdd4df" />
+      <hemisphereLight args={["#c9e0e9", "#43543c", 0.82]} />
       <directionalLight
         castShadow
-        position={[35, 52, 28]}
-        intensity={2.15}
+        position={[52, 70, 34]}
+        intensity={2.55}
         shadow-camera-left={-105}
         shadow-camera-right={105}
         shadow-camera-top={105}
         shadow-camera-bottom={-105}
         shadow-mapSize-width={4096}
         shadow-mapSize-height={4096}
+        shadow-bias={-0.00012}
+        shadow-normalBias={0.045}
       />
       <Environment preset="city" />
       <AtmosphericClouds />
@@ -364,11 +369,19 @@ function Ground() {
     <group>
       <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, -0.04, 0]}>
         <planeGeometry args={[200, 200]} />
-        <meshStandardMaterial color="#6f7f66" roughness={0.96} metalness={0.01} />
+        <meshStandardMaterial color="#6f7f66" roughness={0.96} metalness={0.01} polygonOffset polygonOffsetFactor={2} polygonOffsetUnits={2} />
       </mesh>
       <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, -0.03, 0]}>
         <circleGeometry args={[38, 128]} />
-        <meshStandardMaterial map={sidewalkTexture} color="#ded7c9" roughness={0.9} metalness={0.01} />
+        <meshStandardMaterial
+          map={sidewalkTexture}
+          color="#ded7c9"
+          roughness={0.9}
+          metalness={0.01}
+          polygonOffset
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-1}
+        />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.01, 0]}>
         <ringGeometry args={[37.7, 38.3, 128]} />
@@ -385,13 +398,13 @@ function RoadGrid() {
       {[-72, -36, 0, 36, 72].map((x) => (
         <mesh key={`road-x-${x}`} receiveShadow rotation-x={-Math.PI / 2} position={[x, 0, 0]}>
           <planeGeometry args={[6, 196]} />
-          <meshStandardMaterial map={roadTexture} color="#ffffff" roughness={0.86} metalness={0.02} />
+          <meshStandardMaterial map={roadTexture} color="#ffffff" roughness={0.86} metalness={0.02} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
         </mesh>
       ))}
       {[-72, -36, 0, 36, 72].map((z) => (
         <mesh key={`road-z-${z}`} receiveShadow rotation-x={-Math.PI / 2} rotation-z={Math.PI / 2} position={[0, 0.01, z]}>
           <planeGeometry args={[196, 6]} />
-          <meshStandardMaterial map={roadTexture} color="#ffffff" roughness={0.86} metalness={0.02} />
+          <meshStandardMaterial map={roadTexture} color="#ffffff" roughness={0.86} metalness={0.02} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
         </mesh>
       ))}
       {[-72, -36, 0, 36, 72].flatMap((line) =>
@@ -641,6 +654,12 @@ function GuestAvatar({
 }) {
   const ref = useRef<THREE.Group>(null);
   const blocked = useLoungeStore((state) => state.blockedGuestIds.includes(guest.id));
+  const playerPosition = useLoungeStore((state) => state.playerPosition);
+  const muted = useLoungeStore((state) => state.muted);
+  const crowdCount = useMemo(() => getCrowdCount(playerPosition), [playerPosition]);
+  const voiceRadius = getVoiceRadius(crowdCount);
+  const distance = planarDistance(playerPosition, guest.position);
+  const audible = !muted && !blocked && distance <= voiceRadius;
 
   useFrame(({ clock }) => {
     if (!ref.current) return;
@@ -657,7 +676,14 @@ function GuestAvatar({
   return (
     <Float speed={1.05} rotationIntensity={0.04} floatIntensity={0.12}>
       <group ref={ref} position={guest.position} onClick={handleClick}>
-        <HumanoidAvatar color={blocked ? "#555555" : guest.color} skin={blocked ? "#777777" : "#f0c8a9"} name={guest.name} />
+        <HumanoidAvatar
+          audible={audible}
+          color={blocked ? "#555555" : guest.color}
+          muted={muted || blocked}
+          skin={blocked ? "#777777" : "#f0c8a9"}
+          speaking={audible && isGuestSpeaking(index)}
+          name={guest.name}
+        />
       </group>
     </Float>
   );
@@ -667,12 +693,22 @@ function HumanoidAvatar({
   color,
   skin,
   name,
-  moving = false
+  moving = false,
+  speaking = false,
+  audible = false,
+  muted = false,
+  seated = false,
+  jumping = false
 }: {
   color: string;
   skin: string;
   name: string;
   moving?: boolean;
+  speaking?: boolean;
+  audible?: boolean;
+  muted?: boolean;
+  seated?: boolean;
+  jumping?: boolean;
 }) {
   const leftArm = useRef<THREE.Group>(null);
   const rightArm = useRef<THREE.Group>(null);
@@ -680,12 +716,12 @@ function HumanoidAvatar({
   const rightLeg = useRef<THREE.Group>(null);
 
   useFrame(({ clock }) => {
-    const isMoving = moving || keys.has("w") || keys.has("a") || keys.has("s") || keys.has("d");
+    const isMoving = !seated && (moving || keys.has("w") || keys.has("a") || keys.has("s") || keys.has("d"));
     const stride = isMoving ? Math.sin(clock.elapsedTime * 8) : Math.sin(clock.elapsedTime * 1.4) * 0.16;
-    if (leftArm.current) leftArm.current.rotation.x = stride * 0.55 - 0.15;
-    if (rightArm.current) rightArm.current.rotation.x = -stride * 0.55 - 0.15;
-    if (leftLeg.current) leftLeg.current.rotation.x = -stride * 0.42;
-    if (rightLeg.current) rightLeg.current.rotation.x = stride * 0.42;
+    if (leftArm.current) leftArm.current.rotation.x = seated ? -0.42 : stride * 0.55 - 0.15;
+    if (rightArm.current) rightArm.current.rotation.x = seated ? -0.42 : -stride * 0.55 - 0.15;
+    if (leftLeg.current) leftLeg.current.rotation.x = seated ? -1.15 : jumping ? -0.2 : -stride * 0.42;
+    if (rightLeg.current) rightLeg.current.rotation.x = seated ? -1.15 : jumping ? -0.2 : stride * 0.42;
   });
 
   return (
@@ -752,7 +788,12 @@ function HumanoidAvatar({
         <meshStandardMaterial color="#f8f4ea" />
       </mesh>
       <Html position={[0, 2.38, 0]} center distanceFactor={10}>
-        <div className="world-label name">{name}</div>
+        <div className={`world-label name ${speaking ? "speaking" : ""} ${audible ? "audible" : ""}`}>
+          <span>{name}</span>
+          {seated ? <em>착석 중</em> : null}
+          {jumping ? <em>점프</em> : null}
+          {muted ? <em>음성 꺼짐</em> : speaking ? <em>말하는 중</em> : audible ? <em>들림</em> : null}
+        </div>
       </Html>
     </group>
   );
@@ -762,12 +803,16 @@ function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
   const ref = useRef<THREE.Group>(null);
   const lastSync = useRef(0);
   const movingRef = useRef(false);
+  const verticalVelocity = useRef(0);
   const tables = useMemo(() => lounges.flatMap((lounge) => lounge.tables), [lounges]);
   const guests = useMemo(() => lounges.flatMap((lounge) => lounge.guests), [lounges]);
   const nickname = useLoungeStore((state) => state.nickname);
-  const wave = useLoungeStore((state) => state.wave);
+  const currentTableId = useLoungeStore((state) => state.currentTableId);
+  const isJumping = useLoungeStore((state) => state.isJumping);
   const joinTable = useLoungeStore((state) => state.joinTable);
-  const setPlayerPosition = useLoungeStore((state) => state.setPlayerPosition);
+  const leaveTable = useLoungeStore((state) => state.leaveTable);
+  const setPlayerPose = useLoungeStore((state) => state.setPlayerPose);
+  const setPlayerJumping = useLoungeStore((state) => state.setPlayerJumping);
   const velocity = useMemo(() => new THREE.Vector3(), []);
   const direction = useMemo(() => new THREE.Vector3(), []);
 
@@ -777,15 +822,22 @@ function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
         event.preventDefault();
       }
       keys.add(event.key.toLowerCase());
-      if (event.code === "Space") wave();
+      if (event.code === "Space" && ref.current && ref.current.position.y <= 0.02 && !currentTableId) {
+        verticalVelocity.current = JUMP_POWER;
+        setPlayerJumping(true);
+      }
       if (event.key.toLowerCase() === "e" && ref.current) {
+        if (currentTableId) {
+          leaveTable();
+          return;
+        }
+
         const position = ref.current.position;
         const nearestGuest = getNearest(guests, position);
         const nearestTable = getNearest(tables, position);
 
         if (nearestGuest && nearestGuest.distance <= INTERACTION_RADIUS) {
           onSelectGuest(nearestGuest.item);
-          wave(nearestGuest.item.name);
           return;
         }
 
@@ -801,20 +853,25 @@ function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, [guests, joinTable, onSelectGuest, tables, wave]);
+  }, [currentTableId, guests, joinTable, leaveTable, onSelectGuest, setPlayerJumping, tables]);
 
   useFrame(({ clock }, delta) => {
     if (!ref.current) return;
 
+    if (currentTableId) {
+      movingRef.current = false;
+      velocity.set(0, 0, 0);
+    }
+
     const turnInput = (keys.has("a") ? 1 : 0) + (keys.has("d") ? -1 : 0);
-    if (turnInput !== 0) {
+    if (turnInput !== 0 && !currentTableId) {
       ref.current.rotation.y += turnInput * delta * 2.35;
     }
 
     const moveInput = (keys.has("w") ? 1 : 0) + (keys.has("s") ? -1 : 0);
-    movingRef.current = moveInput !== 0;
+    movingRef.current = moveInput !== 0 && !currentTableId;
 
-    if (moveInput !== 0) {
+    if (moveInput !== 0 && !currentTableId) {
       const forward = ref.current.rotation.y;
       direction.set(Math.sin(forward) * moveInput, 0, Math.cos(forward) * moveInput);
       velocity.lerp(direction.multiplyScalar(7.1), 0.2);
@@ -838,15 +895,35 @@ function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
       velocity.z = 0;
     }
 
+    if (!currentTableId) {
+      ref.current.position.y += verticalVelocity.current * delta;
+      verticalVelocity.current -= GRAVITY * delta;
+      if (ref.current.position.y <= 0) {
+        ref.current.position.y = 0;
+        verticalVelocity.current = 0;
+        setPlayerJumping(false);
+      }
+    } else {
+      ref.current.position.y = THREE.MathUtils.damp(ref.current.position.y, 0.22, 8, delta);
+      setPlayerJumping(false);
+    }
+
     if (clock.elapsedTime - lastSync.current > 0.18) {
       lastSync.current = clock.elapsedTime;
-      setPlayerPosition([ref.current.position.x, ref.current.position.y, ref.current.position.z]);
+      setPlayerPose([ref.current.position.x, ref.current.position.y, ref.current.position.z], ref.current.rotation.y);
     }
   });
 
   return (
     <group ref={ref} name="local-player" position={[0, 0, 7]}>
-      <HumanoidAvatar color="#2b8c73" skin="#f0c8a9" name={nickname} moving={movingRef.current} />
+      <HumanoidAvatar
+        color="#2b8c73"
+        skin="#f0c8a9"
+        name={nickname}
+        moving={movingRef.current}
+        seated={Boolean(currentTableId)}
+        jumping={isJumping}
+      />
     </group>
   );
 }
@@ -904,6 +981,24 @@ function distanceTo(position: Vector3Tuple, target: THREE.Vector3) {
   const dx = position[0] - target.x;
   const dz = position[2] - target.z;
   return Math.sqrt(dx * dx + dz * dz);
+}
+
+function planarDistance(a: Vector3Tuple, b: Vector3Tuple) {
+  const dx = a[0] - b[0];
+  const dz = a[2] - b[2];
+  return Math.sqrt(dx * dx + dz * dz);
+}
+
+function getCrowdCount(position: Vector3Tuple) {
+  return allGuests.filter((guest) => planarDistance(position, guest.position) <= 18).length;
+}
+
+function getVoiceRadius(crowdCount: number) {
+  return BASE_VOICE_RADIUS + Math.min(12, Math.max(0, crowdCount - 2) * 3);
+}
+
+function isGuestSpeaking(index: number) {
+  return Math.floor(Date.now() / 1500 + index) % 4 === 0;
 }
 
 function getNearest<T extends { position: Vector3Tuple }>(items: T[], position: THREE.Vector3) {
