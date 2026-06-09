@@ -242,7 +242,7 @@ function Stage({ accent }: { accent: string }) {
         <meshStandardMaterial color="#222725" roughness={0.2} />
       </mesh>
       <Text position={[0, 1.2, -1.15]} rotation-x={-0.2} fontSize={0.34} color="#f7f4eb" anchorX="center">
-        Open Pitch Plaza
+        오픈 피치 광장
       </Text>
     </group>
   );
@@ -270,7 +270,7 @@ function PrivatePods() {
             <meshStandardMaterial color="#f6edd4" transparent opacity={0.55} />
           </mesh>
           <Text position={[0, 2.05, 0]} fontSize={0.28} color="#f7f4eb" anchorX="center">
-            1:1 Quiet Pod
+            1:1 조용한 포드
           </Text>
         </group>
       ))}
@@ -321,7 +321,7 @@ function TopicTableMesh({ table }: { table: TopicTable }) {
         {table.label}
       </Text>
       <Text position={[0, 1.28, 0]} fontSize={0.18} maxWidth={4.8} color="#f8f4ea" anchorX="center">
-        {table.occupied}/{table.seats} seated - press E nearby
+        {table.occupied}/{table.seats} 착석 - 근처에서 E
       </Text>
     </group>
   );
