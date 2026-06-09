@@ -816,6 +816,7 @@ function Player({ lounge, onSelectGuest }: LoungeWorldProps) {
 function CameraRig() {
   const { camera, scene } = useThree();
   const target = useMemo(() => new THREE.Vector3(), []);
+  const lookTarget = useMemo(() => new THREE.Vector3(), []);
   const desired = useMemo(() => new THREE.Vector3(), []);
   const yaw = useRef(0);
   const pitch = useRef(0);
@@ -840,15 +841,22 @@ function CameraRig() {
     }
 
     target.copy(player.position);
+    const avatarYaw = player.rotation.y;
+    const cameraYaw = avatarYaw + Math.PI + yaw.current;
     const radius = 14.5;
     const height = 8.4 + pitch.current * 6;
     desired.set(
-      target.x + Math.sin(yaw.current) * radius,
+      target.x + Math.sin(cameraYaw) * radius,
       target.y + height,
-      target.z + Math.cos(yaw.current) * radius
+      target.z + Math.cos(cameraYaw) * radius
+    );
+    lookTarget.set(
+      target.x + Math.sin(avatarYaw) * 2.4,
+      target.y + 1.35,
+      target.z + Math.cos(avatarYaw) * 2.4
     );
     camera.position.lerp(desired, 0.075);
-    camera.lookAt(target.x, target.y + 1.35, target.z - 1.2);
+    camera.lookAt(lookTarget);
   });
 
   return null;
