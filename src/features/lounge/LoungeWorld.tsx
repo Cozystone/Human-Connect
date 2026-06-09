@@ -738,6 +738,9 @@ function Player({ lounge, onSelectGuest }: LoungeWorldProps) {
 
   useEffect(() => {
     const down = (event: KeyboardEvent) => {
+      if (["KeyW", "KeyA", "KeyS", "KeyD", "Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.code)) {
+        event.preventDefault();
+      }
       keys.add(event.key.toLowerCase());
       if (event.code === "Space") wave();
       if (event.key.toLowerCase() === "e" && ref.current) {
@@ -767,21 +770,21 @@ function Player({ lounge, onSelectGuest }: LoungeWorldProps) {
 
   useFrame(({ clock }, delta) => {
     if (!ref.current) return;
-    direction.set(0, 0, 0);
-    if (keys.has("w")) direction.z -= 1;
-    if (keys.has("s")) direction.z += 1;
-    if (keys.has("a")) direction.x -= 1;
-    if (keys.has("d")) direction.x += 1;
 
-    movingRef.current = direction.lengthSq() > 0;
+    const turnInput = (keys.has("a") ? 1 : 0) + (keys.has("d") ? -1 : 0);
+    if (turnInput !== 0) {
+      ref.current.rotation.y += turnInput * delta * 2.35;
+    }
 
-    if (movingRef.current) {
-      direction.normalize();
-      velocity.lerp(direction.multiplyScalar(7.4), 0.18);
-      const targetAngle = Math.atan2(velocity.x, velocity.z);
-      ref.current.rotation.y = THREE.MathUtils.lerp(ref.current.rotation.y, targetAngle, 0.16);
+    const moveInput = (keys.has("w") ? 1 : 0) + (keys.has("s") ? -1 : 0);
+    movingRef.current = moveInput !== 0;
+
+    if (moveInput !== 0) {
+      const forward = ref.current.rotation.y;
+      direction.set(Math.sin(forward) * moveInput, 0, Math.cos(forward) * moveInput);
+      velocity.lerp(direction.multiplyScalar(7.1), 0.2);
     } else {
-      velocity.lerp(new THREE.Vector3(0, 0, 0), 0.14);
+      velocity.multiplyScalar(Math.max(0, 1 - delta * 8));
     }
 
     const nextX = ref.current.position.x + velocity.x * delta;
