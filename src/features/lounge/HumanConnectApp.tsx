@@ -2,7 +2,7 @@
 
 import { Flag, Hand, Map, Mic, MicOff, Radio, Shield, UserRound, Users, Volume2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { allGuests, allTables, getLounge, getLoungeForTable, lounges, type Guest } from "./loungeData";
+import { allGuests, allTables, cityNpcs, getLounge, getLoungeForTable, lounges, type CityNpc, type Guest } from "./loungeData";
 import { useLoungeStore } from "./loungeStore";
 import { LoungeWorld } from "./LoungeWorld";
 
@@ -14,6 +14,12 @@ const MINIMAP_SIZE = 184;
 
 export function HumanConnectApp() {
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+  const [selectedNpc, setSelectedNpc] = useState<CityNpc | null>(null);
+  const [npcMessage, setNpcMessage] = useState("");
+  const [npcReply, setNpcReply] = useState<string | null>(null);
+  const [npcProvider, setNpcProvider] = useState<string | null>(null);
+  const [npcLoading, setNpcLoading] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState("익명 빌더");
   const [interestDraft, setInterestDraft] = useState("창업, 디자인, AI");
   const [voiceTick, setVoiceTick] = useState(0);
@@ -95,7 +101,7 @@ export function HumanConnectApp() {
   return (
     <main className="app-shell">
       <div className="world-canvas">
-        <LoungeWorld activeLounge={activeDistrict} lounges={lounges} onSelectGuest={setSelectedGuest} />
+        <LoungeWorld activeLounge={activeDistrict} lounges={lounges} onSelectGuest={setSelectedGuest} onSelectNpc={setSelectedNpc} />
       </div>
 
       <header className="topbar">
@@ -235,6 +241,7 @@ export function HumanConnectApp() {
       </aside>
 
       <GameMinimap
+        onOpenMap={() => setMapOpen(true)}
         playerHeading={playerHeading}
         playerPosition={playerPosition}
         voiceRadius={voiceRadius}
@@ -266,8 +273,47 @@ export function HumanConnectApp() {
         <kbd>W/S</kbd><span>전후진</span>
         <kbd>A/D</kbd><span>회전</span>
         <kbd>Space</kbd><span>{isJumping ? "점프 중" : "점프"}</span>
-        <kbd>E</kbd><span>{currentTable ? "일어나기" : closestTable ? "앉기" : "상호작용"}</span>
+        <kbd>E</kbd><span>{currentTable ? "일어나기" : closestTable ? "앉기" : "NPC/상호작용"}</span>
       </section>
+
+      {mapOpen ? (
+        <FullMapOverlay
+          audibleGuests={audibleGuests.map((item) => item.guest.id)}
+          onClose={() => setMapOpen(false)}
+          playerPosition={playerPosition}
+          voiceRadius={voiceRadius}
+        />
+      ) : null}
+
+      {selectedNpc ? (
+        <section className="npc-dialog glass-panel" aria-label="NPC 대화">
+          <div className="panel-header">
+            <div>
+              <span className="eyebrow">Local LLM NPC</span>
+              <h2>{selectedNpc.name}</h2>
+              <p>{selectedNpc.role} · {selectedNpc.personality}</p>
+            </div>
+            <button className="icon-button" onClick={() => setSelectedNpc(null)} type="button" title="닫기">
+              <X size={16} aria-hidden />
+            </button>
+          </div>
+          <div className="npc-reply">
+            {npcReply ?? "가까이 다가왔네요. 궁금한 걸 짧게 물어보세요."}
+            {npcProvider ? <span>{npcProvider === "ollama" ? "Ollama 응답" : "Fallback 응답"}</span> : null}
+          </div>
+          <div className="npc-input-row">
+            <input
+              aria-label="NPC에게 말하기"
+              value={npcMessage}
+              onChange={(event) => setNpcMessage(event.target.value)}
+              placeholder="예: 이 도시에서 누구와 이야기하면 좋을까?"
+            />
+            <button className="action-button primary" disabled={npcLoading} onClick={() => askNpc(selectedNpc)} type="button">
+              {npcLoading ? "생각 중" : "말하기"}
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {selectedGuest ? (
         <section className="conversation-dock glass-panel" aria-label="선택한 사람">
@@ -330,13 +376,36 @@ export function HumanConnectApp() {
       {toast ? <div className="toast glass-panel">{toast}</div> : null}
     </main>
   );
+
+  async function askNpc(npc: CityNpc) {
+    setNpcLoading(true);
+    try {
+      const response = await fetch("/api/npc/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          npcId: npc.id,
+          message: npcMessage,
+          context: `플레이어 위치 ${playerPosition.map((v) => v.toFixed(1)).join(", ")}`
+        })
+      });
+      const data = (await response.json()) as { text?: string; provider?: string };
+      setNpcReply(data.text ?? "잠깐 생각이 끊겼어요. 다시 말해줄래요?");
+      setNpcProvider(data.provider ?? "fallback");
+      setNpcMessage("");
+    } finally {
+      setNpcLoading(false);
+    }
+  }
 }
 
 function GameMinimap({
+  onOpenMap,
   playerHeading,
   playerPosition,
   voiceRadius
 }: {
+  onOpenMap: () => void;
   playerHeading: number;
   playerPosition: [number, number, number];
   voiceRadius: number;
@@ -431,7 +500,7 @@ function GameMinimap({
   }, [playerHeading, playerPosition, voiceRadius]);
 
   return (
-    <section className="mini-map game-map" aria-label="도시 미니맵">
+    <button className="mini-map game-map" aria-label="도시 미니맵 열기" onClick={onOpenMap} type="button">
       <canvas ref={canvasRef} width={MINIMAP_SIZE} height={MINIMAP_SIZE} />
       <span className="compass north">N</span>
       <span className="compass east">E</span>
@@ -440,6 +509,75 @@ function GameMinimap({
       <div className="mini-map-header">
         <strong>도시 미니맵</strong>
         <span><Volume2 size={12} aria-hidden /> {voiceRadius}m</span>
+      </div>
+    </button>
+  );
+}
+
+function FullMapOverlay({
+  audibleGuests,
+  onClose,
+  playerPosition,
+  voiceRadius
+}: {
+  audibleGuests: string[];
+  onClose: () => void;
+  playerPosition: [number, number, number];
+  voiceRadius: number;
+}) {
+  const toMapStyle = (x: number, z: number) => ({
+    left: `${((x + MAP_LIMIT) / (MAP_LIMIT * 2)) * 100}%`,
+    top: `${((MAP_LIMIT - z) / (MAP_LIMIT * 2)) * 100}%`
+  });
+
+  return (
+    <section className="full-map glass-panel" aria-label="전체 지도">
+      <div className="panel-header">
+        <div>
+          <span className="eyebrow">Live City Map</span>
+          <h2>전체 지도</h2>
+          <p>실시간 사용자, NPC, 활성 테이블, 근접 음성 반경을 한 번에 봅니다.</p>
+        </div>
+        <button className="icon-button" onClick={onClose} type="button" title="닫기">
+          <X size={16} aria-hidden />
+        </button>
+      </div>
+      <div className="full-map-grid">
+        <div className="full-map-canvas">
+          {[-216, -180, -144, -108, -72, -36, 0, 36, 72, 108, 144, 180, 216].map((line) => (
+            <span className="full-map-road vertical" key={`v-${line}`} style={{ left: `${((line + MAP_LIMIT) / (MAP_LIMIT * 2)) * 100}%` }} />
+          ))}
+          {[-216, -180, -144, -108, -72, -36, 0, 36, 72, 108, 144, 180, 216].map((line) => (
+            <span className="full-map-road horizontal" key={`h-${line}`} style={{ top: `${((MAP_LIMIT - line) / (MAP_LIMIT * 2)) * 100}%` }} />
+          ))}
+          <span
+            className="full-map-voice"
+            style={{
+              ...toMapStyle(playerPosition[0], playerPosition[2]),
+              width: `${(voiceRadius / MAP_LIMIT) * 100}%`,
+              height: `${(voiceRadius / MAP_LIMIT) * 100}%`
+            }}
+          />
+          {allTables.map((table) => (
+            <span className="full-map-table" key={table.id} style={{ ...toMapStyle(table.position[0], table.position[2]), background: table.color }} title={table.label} />
+          ))}
+          {allGuests.map((guest) => (
+            <span className={`full-map-user ${audibleGuests.includes(guest.id) ? "active" : ""}`} key={guest.id} style={toMapStyle(guest.position[0], guest.position[2])} title={guest.name} />
+          ))}
+          {cityNpcs.map((npc) => (
+            <span className="full-map-npc" key={npc.id} style={toMapStyle(npc.position[0], npc.position[2])} title={npc.name} />
+          ))}
+          <span className="full-map-player" style={toMapStyle(playerPosition[0], playerPosition[2])} />
+        </div>
+        <div className="full-map-stats">
+          <strong>활성 상태</strong>
+          <p>실시간 사용자 준비: {allGuests.length + 1}명</p>
+          <p>현재 들리는 사람: {audibleGuests.length}명</p>
+          <p>NPC: {cityNpcs.length}명</p>
+          <p>활성 테이블: {allTables.length}개</p>
+          <p>음성 반경: {voiceRadius}m</p>
+          <span>초록 점은 내 위치, 파란 점은 들리는 사용자, 보라 점은 NPC입니다.</span>
+        </div>
       </div>
     </section>
   );

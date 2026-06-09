@@ -4,13 +4,14 @@ import { Cloud, Environment, Float, Html, Sky, Stars } from "@react-three/drei";
 import { Canvas, ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { allGuests, type Guest, type Lounge, type TopicTable, type Vector3Tuple } from "./loungeData";
+import { allGuests, cityNpcs, type CityNpc, type Guest, type Lounge, type TopicTable, type Vector3Tuple } from "./loungeData";
 import { useLoungeStore } from "./loungeStore";
 
 type LoungeWorldProps = {
   activeLounge: Lounge;
   lounges: Lounge[];
   onSelectGuest: (guest: Guest) => void;
+  onSelectNpc: (npc: CityNpc) => void;
 };
 
 const keys = new Set<string>();
@@ -26,6 +27,7 @@ type Collider = {
   z: number;
   halfX: number;
   halfZ: number;
+  kind?: "bench" | "solid";
 };
 
 const BUILDING_PALETTES = {
@@ -324,7 +326,7 @@ function getSidewalkTexture() {
   return texture;
 }
 
-export function LoungeWorld({ activeLounge, lounges, onSelectGuest }: LoungeWorldProps) {
+export function LoungeWorld({ activeLounge, lounges, onSelectGuest, onSelectNpc }: LoungeWorldProps) {
   return (
     <Canvas
       shadows
@@ -366,14 +368,14 @@ export function LoungeWorld({ activeLounge, lounges, onSelectGuest }: LoungeWorl
       />
       <Environment preset="city" />
       <AtmosphericClouds />
-      <OpenCity activeLounge={activeLounge} lounges={lounges} onSelectGuest={onSelectGuest} />
-      <Player activeLounge={activeLounge} lounges={lounges} onSelectGuest={onSelectGuest} />
+      <OpenCity activeLounge={activeLounge} lounges={lounges} onSelectGuest={onSelectGuest} onSelectNpc={onSelectNpc} />
+      <Player activeLounge={activeLounge} lounges={lounges} onSelectGuest={onSelectGuest} onSelectNpc={onSelectNpc} />
       <CameraRig />
     </Canvas>
   );
 }
 
-function OpenCity({ activeLounge, lounges, onSelectGuest }: LoungeWorldProps) {
+function OpenCity({ activeLounge, lounges, onSelectGuest, onSelectNpc }: LoungeWorldProps) {
   const tables = useMemo(() => lounges.flatMap((lounge) => lounge.tables), [lounges]);
   const guests = useMemo(() => lounges.flatMap((lounge) => lounge.guests), [lounges]);
 
@@ -394,6 +396,9 @@ function OpenCity({ activeLounge, lounges, onSelectGuest }: LoungeWorldProps) {
 
       {guests.map((guest, index) => (
         <GuestAvatar key={guest.id} guest={guest} index={index} onSelectGuest={onSelectGuest} />
+      ))}
+      {cityNpcs.map((npc, index) => (
+        <NpcAvatar key={npc.id} npc={npc} index={index} onSelectNpc={onSelectNpc} />
       ))}
     </group>
   );
@@ -755,6 +760,55 @@ function GuestAvatar({
   );
 }
 
+function NpcAvatar({
+  npc,
+  index,
+  onSelectNpc
+}: {
+  npc: CityNpc;
+  index: number;
+  onSelectNpc: (npc: CityNpc) => void;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const origin = useMemo(() => new THREE.Vector3(...npc.position), [npc.position]);
+  const audible = useLoungeStore((state) => planarDistance(state.playerPosition, npc.position) < 16);
+
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.elapsedTime * 0.18 + index * 1.7;
+    const x = origin.x + Math.sin(t) * (8 + index * 1.6);
+    const z = origin.z + Math.cos(t * 0.8) * (6 + index * 1.2);
+    const dx = x - ref.current.position.x;
+    const dz = z - ref.current.position.z;
+    ref.current.position.x = THREE.MathUtils.lerp(ref.current.position.x, x, 0.018);
+    ref.current.position.z = THREE.MathUtils.lerp(ref.current.position.z, z, 0.018);
+    ref.current.rotation.y = Math.atan2(dx, dz);
+  });
+
+  const handleClick = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
+    onSelectNpc(npc);
+  };
+
+  return (
+    <group ref={ref} position={npc.position} onClick={handleClick}>
+      <HumanoidAvatar
+        audible={audible}
+        color={npc.color}
+        name={npc.name}
+        skin="#e8c3a1"
+        speaking={audible && isGuestSpeaking(index + 8)}
+      />
+      <Html position={[0, 2.95, 0]} center distanceFactor={12}>
+        <div className="world-label npc">
+          <strong>{npc.role}</strong>
+          <span>NPC · E 대화</span>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
 function HumanoidAvatar({
   color,
   skin,
@@ -865,7 +919,7 @@ function HumanoidAvatar({
   );
 }
 
-function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
+function Player({ lounges, onSelectGuest, onSelectNpc }: LoungeWorldProps) {
   const ref = useRef<THREE.Group>(null);
   const lastSync = useRef(0);
   const movingRef = useRef(false);
@@ -901,7 +955,13 @@ function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
 
         const position = ref.current.position;
         const nearestGuest = getNearest(guests, position);
+        const nearestNpc = getNearest(cityNpcs, position);
         const nearestTable = getNearest(tables, position);
+
+        if (nearestNpc && nearestNpc.distance <= INTERACTION_RADIUS + 1.2) {
+          onSelectNpc(nearestNpc.item);
+          return;
+        }
 
         if (nearestGuest && nearestGuest.distance <= INTERACTION_RADIUS) {
           onSelectGuest(nearestGuest.item);
@@ -920,7 +980,7 @@ function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, [currentTableId, guests, joinTable, leaveTable, onSelectGuest, setPlayerJumping, tables]);
+  }, [currentTableId, guests, joinTable, leaveTable, onSelectGuest, onSelectNpc, setPlayerJumping, tables]);
 
   useFrame(({ clock }, delta) => {
     if (!ref.current) return;
@@ -948,13 +1008,15 @@ function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
 
     const nextX = ref.current.position.x + velocity.x * delta;
     const nextZ = ref.current.position.z + velocity.z * delta;
-    if (!hitsCollider(nextX, ref.current.position.z, colliders)) {
+    const canClearLowObstacle = ref.current.position.y > 0.72;
+
+    if (!hitsCollider(nextX, ref.current.position.z, colliders, canClearLowObstacle)) {
       ref.current.position.x = THREE.MathUtils.clamp(nextX, -WORLD_LIMIT, WORLD_LIMIT);
     } else {
       velocity.x = 0;
     }
 
-    if (!hitsCollider(ref.current.position.x, nextZ, colliders)) {
+    if (!hitsCollider(ref.current.position.x, nextZ, colliders, canClearLowObstacle)) {
       ref.current.position.z = THREE.MathUtils.clamp(nextZ, -WORLD_LIMIT, WORLD_LIMIT);
     } else {
       velocity.z = 0;
@@ -1110,7 +1172,8 @@ function getWorldColliders(lounges: Lounge[]): Collider[] {
     x,
     z,
     halfX: index % 2 ? 0.65 : 1.45,
-    halfZ: index % 2 ? 1.45 : 0.65
+    halfZ: index % 2 ? 1.45 : 0.65,
+    kind: "bench" as const
   }));
 
   const podColliders = podPositions.map(([x, , z]) => ({
@@ -1146,9 +1209,10 @@ function getBuildingKind(height: number): keyof typeof BUILDING_PALETTES {
   return "apartment";
 }
 
-function hitsCollider(x: number, z: number, colliders: Collider[]) {
+function hitsCollider(x: number, z: number, colliders: Collider[], canClearLowObstacle = false) {
   return colliders.some(
     (collider) =>
+      !(canClearLowObstacle && collider.kind === "bench") &&
       Math.abs(x - collider.x) < collider.halfX + PLAYER_RADIUS &&
       Math.abs(z - collider.z) < collider.halfZ + PLAYER_RADIUS
   );

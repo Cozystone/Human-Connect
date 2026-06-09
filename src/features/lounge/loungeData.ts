@@ -22,6 +22,16 @@ export type Guest = {
   color: string;
 };
 
+export type CityNpc = {
+  id: string;
+  name: string;
+  role: string;
+  personality: string;
+  interests: string[];
+  position: Vector3Tuple;
+  color: string;
+};
+
 export type Lounge = {
   id: LoungeId;
   name: string;
@@ -248,6 +258,54 @@ export const lounges: Lounge[] = [
         color: "#61a675"
       }
     ]
+  }
+];
+
+export const cityNpcs: CityNpc[] = [
+  {
+    id: "npc-hana",
+    name: "Hana",
+    role: "도시 안내자",
+    personality: "친절하고 호기심 많음",
+    interests: ["길 안내", "새로운 사람", "대화 시작"],
+    position: [-18, 0, 42],
+    color: "#6aa1c4"
+  },
+  {
+    id: "npc-joon",
+    name: "Joon",
+    role: "카페 창업자",
+    personality: "현실적이고 빠르게 피드백함",
+    interests: ["MVP", "사용자 관찰", "작은 실험"],
+    position: [66, 0, -24],
+    color: "#c99355"
+  },
+  {
+    id: "npc-ria",
+    name: "Ria",
+    role: "프론트엔드 리뷰어",
+    personality: "차분하고 구체적으로 설명함",
+    interests: ["React", "상태 관리", "성능"],
+    position: [-76, 0, -18],
+    color: "#7a8fd1"
+  },
+  {
+    id: "npc-moon",
+    name: "Moon",
+    role: "브랜드 관찰자",
+    personality: "감각적이고 비유를 잘 씀",
+    interests: ["브랜드", "색상", "공간 경험"],
+    position: [112, 0, 118],
+    color: "#c06f8d"
+  },
+  {
+    id: "npc-sora",
+    name: "Sora",
+    role: "커뮤니티 매니저",
+    personality: "따뜻하고 연결을 잘 제안함",
+    interests: ["커뮤니티", "온보딩", "안전한 대화"],
+    position: [-154, 0, 116],
+    color: "#68aa84"
   }
 ];
 
