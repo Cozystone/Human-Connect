@@ -1,0 +1,395 @@
+:root {
+  --bg: #10120f;
+  --panel: rgba(247, 244, 235, 0.9);
+  --panel-strong: #fbf7ec;
+  --ink: #17201d;
+  --muted: #66706b;
+  --line: rgba(23, 32, 29, 0.13);
+  --accent: #2b8c73;
+  --accent-dark: #17614f;
+  --signal: #e1a13a;
+  --danger: #b84a44;
+  --sky: #87b7c7;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-inter), Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+.boot-screen {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: #10120f;
+  color: #f7f4eb;
+}
+
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  background: #10120f;
+}
+
+.world-canvas {
+  position: fixed;
+  inset: 0;
+}
+
+.topbar {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(190px, 260px) 1fr auto;
+  gap: 12px;
+  align-items: start;
+  pointer-events: none;
+}
+
+.brand-panel,
+.lounge-tabs,
+.status-panel,
+.side-panel,
+.conversation-dock,
+.toast,
+.entry-panel {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: var(--panel);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+  pointer-events: auto;
+}
+
+.brand-panel {
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.brand-panel h1 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.brand-panel p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.lounge-tabs {
+  display: flex;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  padding: 6px;
+}
+
+.tab-button,
+.icon-button,
+.action-button,
+.table-button,
+.seat-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 7px;
+  color: var(--ink);
+  background: transparent;
+  transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.tab-button {
+  min-width: 128px;
+  padding: 9px 12px;
+  white-space: nowrap;
+}
+
+.tab-button.active,
+.action-button.primary,
+.seat-button.active {
+  background: var(--accent);
+  color: white;
+}
+
+.tab-button:hover,
+.icon-button:hover,
+.action-button:hover,
+.table-button:hover,
+.seat-button:hover {
+  transform: translateY(-1px);
+  background: rgba(43, 140, 115, 0.12);
+}
+
+.status-panel {
+  min-width: 220px;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.status-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.status-grid strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 14px;
+}
+
+.side-panel {
+  position: fixed;
+  top: 112px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 18;
+  width: min(360px, calc(100vw - 32px));
+  overflow: auto;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.panel-header h2,
+.entry-panel h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.panel-header p,
+.entry-panel p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.action-button {
+  min-height: 36px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.section-title {
+  margin: 16px 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.table-list,
+.people-list {
+  display: grid;
+  gap: 8px;
+}
+
+.table-button,
+.person-card {
+  width: 100%;
+  justify-content: flex-start;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: left;
+}
+
+.table-button.active {
+  border-color: rgba(43, 140, 115, 0.7);
+  background: rgba(43, 140, 115, 0.14);
+}
+
+.table-meta,
+.person-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pill {
+  border-radius: 999px;
+  background: rgba(23, 32, 29, 0.08);
+  color: #2f3d39;
+  font-size: 11px;
+  line-height: 1;
+  padding: 5px 8px;
+}
+
+.person-card {
+  color: inherit;
+}
+
+.person-card strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.entry-panel {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 19;
+  width: min(420px, calc(100vw - 32px));
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.entry-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.entry-form input {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: white;
+  color: var(--ink);
+  padding: 0 12px;
+}
+
+.conversation-dock {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 21;
+  display: flex;
+  width: min(680px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.conversation-dock strong {
+  display: block;
+}
+
+.conversation-dock span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 23;
+  max-width: min(360px, calc(100vw - 32px));
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--ink);
+}
+
+.hud-help {
+  position: fixed;
+  left: 16px;
+  bottom: 134px;
+  z-index: 16;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .lounge-tabs {
+    width: 100%;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .tab-button {
+    flex: 1 1 150px;
+    min-width: 0;
+  }
+
+  .status-panel {
+    display: none;
+  }
+
+  .side-panel {
+    top: auto;
+    left: 16px;
+    bottom: 16px;
+    max-height: 48vh;
+  }
+
+  .entry-panel {
+    display: none;
+  }
+
+  .conversation-dock {
+    bottom: 16px;
+  }
+
+  .hud-help {
+    display: none;
+  }
+}
