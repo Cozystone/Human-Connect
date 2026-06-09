@@ -2,15 +2,14 @@
 
 import { Flag, Hand, Map, Mic, MicOff, Radio, Shield, UserRound, Users, Volume2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
-import { allGuests, allTables, getLounge, getLoungeForTable, lounges, type Guest, type Lounge } from "./loungeData";
+import { allGuests, allTables, getLounge, getLoungeForTable, lounges, type Guest } from "./loungeData";
 import { useLoungeStore } from "./loungeStore";
 import { LoungeWorld } from "./LoungeWorld";
 
 const NEAR_GUEST_RADIUS = 5.2;
 const NEAR_TABLE_RADIUS = 6.8;
 const BASE_VOICE_RADIUS = 10;
-const MAP_LIMIT = 92;
+const MAP_LIMIT = 240;
 const MINIMAP_SIZE = 184;
 
 export function HumanConnectApp() {
@@ -31,7 +30,6 @@ export function HumanConnectApp() {
     toast,
     mode,
     networkMode,
-    setLounge,
     enterAsGuest,
     joinTable,
     leaveTable,
@@ -48,7 +46,7 @@ export function HumanConnectApp() {
   const currentTable = allTables.find((table) => table.id === currentTableId);
   const currentTableDistrict = currentTable ? getLoungeForTable(currentTable.id) : null;
   const privateGuest = allGuests.find((guest) => guest.id === privateGuestId);
-  const focusedTables = activeDistrict.tables;
+  const focusedTables = allTables;
   const crowdCount = useMemo(() => getCrowdCount(playerPosition), [playerPosition]);
   const voiceRadius = getVoiceRadius(crowdCount);
 
@@ -73,7 +71,6 @@ export function HumanConnectApp() {
         .find((item) => item.distance <= NEAR_TABLE_RADIUS),
     [playerPosition]
   );
-  const nearestDistrict = useMemo(() => getNearestDistrict(playerPosition), [playerPosition]);
 
   useEffect(() => {
     const interval = window.setInterval(() => setVoiceTick((tick) => tick + 1), 900);
@@ -108,19 +105,12 @@ export function HumanConnectApp() {
           <p>하나의 도시 안에서 관심사가 맞는 사람들이 우연히 만나 진짜 대화를 시작합니다.</p>
         </section>
 
-        <nav className="lounge-tabs glass-panel" aria-label="도시 구역 선택">
-          {lounges.map((item) => (
-            <button
-              className={`tab-button ${item.id === activeDistrict.id ? "active" : ""}`}
-              key={item.id}
-              onClick={() => setLounge(item.id)}
-              type="button"
-              style={{ "--district": item.accent } as CSSProperties}
-            >
-              <Map size={16} aria-hidden />
-              {item.name}
-            </button>
-          ))}
+        <nav className="lounge-tabs glass-panel" aria-label="관심 필터">
+          <button className="tab-button active" type="button">
+            <Map size={16} aria-hidden />
+            전체 도시
+          </button>
+          <span className="map-scale-chip">500m급 오픈월드</span>
         </nav>
 
         <section className="status-panel glass-panel" aria-label="세션 상태">
@@ -144,9 +134,9 @@ export function HumanConnectApp() {
       <aside className="side-panel glass-panel" aria-label="도시 조작 패널">
         <div className="panel-header">
           <div>
-            <span className="eyebrow">{activeDistrict.districtName}</span>
-            <h2>{activeDistrict.name}</h2>
-            <p>{activeDistrict.tone}</p>
+            <span className="eyebrow">Open World</span>
+            <h2>Human Connect City</h2>
+            <p>창업, 개발, 디자인 대화가 한 도시 안에 자연스럽게 섞여 있습니다.</p>
           </div>
           <button className="icon-button" onClick={() => wave()} type="button" title="손 흔들기">
             <Hand size={18} aria-hidden />
@@ -171,7 +161,7 @@ export function HumanConnectApp() {
               ? `${closestGuest.guest.name}님이 근처에 있습니다`
               : closestTable
                 ? `${closestTable.table.label} 의자 근처입니다`
-                : `${nearestDistrict.name} 방향을 지나고 있습니다`}
+                : "넓어진 도시를 지나고 있습니다"}
           </strong>
           <span>
             {currentTable
@@ -199,7 +189,7 @@ export function HumanConnectApp() {
           ) : null}
         </div>
 
-        <h3 className="section-title">선택 구역 테이블</h3>
+        <h3 className="section-title">도시 전체 테이블</h3>
         <div className="table-list">
           {focusedTables.map((table) => (
             <button
@@ -245,7 +235,6 @@ export function HumanConnectApp() {
       </aside>
 
       <GameMinimap
-        activeDistrict={activeDistrict}
         playerHeading={playerHeading}
         playerPosition={playerPosition}
         voiceRadius={voiceRadius}
@@ -344,12 +333,10 @@ export function HumanConnectApp() {
 }
 
 function GameMinimap({
-  activeDistrict,
   playerHeading,
   playerPosition,
   voiceRadius
 }: {
-  activeDistrict: Lounge;
   playerHeading: number;
   playerPosition: [number, number, number];
   voiceRadius: number;
@@ -390,7 +377,7 @@ function GameMinimap({
 
     ctx.strokeStyle = "rgba(235,238,232,0.55)";
     ctx.lineWidth = 4;
-    [-72, -36, 0, 36, 72].forEach((line) => {
+    [-216, -180, -144, -108, -72, -36, 0, 36, 72, 108, 144, 180, 216].forEach((line) => {
       const a = toMap(line, -MAP_LIMIT);
       const b = toMap(line, MAP_LIMIT);
       ctx.beginPath();
@@ -403,17 +390,6 @@ function GameMinimap({
       ctx.beginPath();
       ctx.moveTo(c.x, c.y);
       ctx.lineTo(d.x, d.y);
-      ctx.stroke();
-    });
-
-    lounges.forEach((lounge) => {
-      const point = toMap(lounge.center[0], lounge.center[2]);
-      ctx.fillStyle = `${lounge.accent}55`;
-      ctx.strokeStyle = lounge.id === activeDistrict.id ? "#ffffff" : `${lounge.accent}bb`;
-      ctx.lineWidth = lounge.id === activeDistrict.id ? 2 : 1;
-      ctx.beginPath();
-      ctx.arc(point.x, point.y, lounge.radius * scale, 0, Math.PI * 2);
-      ctx.fill();
       ctx.stroke();
     });
 
@@ -452,7 +428,7 @@ function GameMinimap({
     ctx.strokeStyle = "#ffffff";
     ctx.lineWidth = 1.4;
     ctx.stroke();
-  }, [activeDistrict, playerHeading, playerPosition, voiceRadius]);
+  }, [playerHeading, playerPosition, voiceRadius]);
 
   return (
     <section className="mini-map game-map" aria-label="도시 미니맵">
@@ -485,12 +461,6 @@ function getVoiceRadius(crowdCount: number) {
 
 function isGuestSpeaking(index: number, tick: number) {
   return (tick + index) % 4 === 0;
-}
-
-function getNearestDistrict(position: [number, number, number]) {
-  return lounges
-    .map((lounge) => ({ lounge, distance: planarDistance(position, lounge.center) }))
-    .sort((a, b) => a.distance - b.distance)[0].lounge;
 }
 
 function getModeLabel(mode: string) {

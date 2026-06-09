@@ -154,6 +154,18 @@ button {
   white-space: nowrap;
 }
 
+.map-scale-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  border-radius: 7px;
+  background: rgba(23, 32, 29, 0.08);
+  color: var(--muted);
+  font-size: 12px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
 .tab-button.active,
 .action-button.primary,
 .seat-button.active {

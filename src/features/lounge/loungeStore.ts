@@ -52,7 +52,7 @@ export const useLoungeStore = create<LoungeState>((set, get) => ({
   setLounge: (loungeId) =>
     set({
       loungeId,
-      toast: "선택한 구역 정보를 열었습니다. 미니맵을 보며 직접 걸어가 보세요."
+      toast: "관심 주제를 표시했습니다. 경계 없이 열린 도시를 계속 탐색해 보세요."
     }),
   enterAsGuest: (nickname, interests) =>
     set({
@@ -73,7 +73,7 @@ export const useLoungeStore = create<LoungeState>((set, get) => ({
     set({
       currentTableId: null,
       mode: "floor",
-      toast: "자리에서 일어났습니다. 다른 구역으로 이동할 수 있습니다."
+      toast: "자리에서 일어났습니다. 도시 어디로든 이동할 수 있습니다."
     }),
   requestPrivate: (guestId, guestName) => {
     if (get().blockedGuestIds.includes(guestId)) {

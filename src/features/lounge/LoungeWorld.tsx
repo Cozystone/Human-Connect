@@ -14,7 +14,7 @@ type LoungeWorldProps = {
 };
 
 const keys = new Set<string>();
-const WORLD_LIMIT = 92;
+const WORLD_LIMIT = 240;
 const INTERACTION_RADIUS = 5.2;
 const PLAYER_RADIUS = 0.55;
 const BASE_VOICE_RADIUS = 10;
@@ -34,7 +34,7 @@ const BUILDING_PALETTES = {
   apartment: ["#9a7a60", "#a08070", "#c09a80", "#b08870", "#9a8060"]
 };
 
-const treePositions: Vector3Tuple[] = [
+const baseTreePositions: Vector3Tuple[] = [
   [-44, 0, -42],
   [-28, 0, -46],
   [-10, 0, -50],
@@ -55,7 +55,7 @@ const treePositions: Vector3Tuple[] = [
   [20, 0, -16]
 ];
 
-const benchPositions: Vector3Tuple[] = [
+const baseBenchPositions: Vector3Tuple[] = [
   [-5, 0, 5],
   [7, 0, 5],
   [-16, 0, -1],
@@ -66,7 +66,7 @@ const benchPositions: Vector3Tuple[] = [
   [28, 0, 29]
 ];
 
-const buildingSpecs = [
+const baseBuildingSpecs = [
   [-72, -56, 9, 18, 8, "#687873"],
   [-55, -74, 12, 28, 10, "#7b8379"],
   [-30, -64, 10, 17, 8, "#586b72"],
@@ -88,7 +88,7 @@ const podPositions: Vector3Tuple[] = [
   [0, 0, 66]
 ];
 
-const streetLightPositions: Vector3Tuple[] = [
+const baseStreetLightPositions: Vector3Tuple[] = [
   [-72, 0, -28],
   [-72, 0, 28],
   [-36, 0, -52],
@@ -104,6 +104,100 @@ const streetLightPositions: Vector3Tuple[] = [
   [-14, 0, 24],
   [14, 0, 24]
 ];
+
+type BuildingSpec = readonly [number, number, number, number, number, string];
+
+function createPrng(seed = 42) {
+  let state = seed;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 4294967295;
+  };
+}
+
+function generateCityBuildings(): BuildingSpec[] {
+  const rng = createPrng(991);
+  const specs: BuildingSpec[] = [];
+  const cells = [-210, -174, -138, -102, -66, -30, 30, 66, 102, 138, 174, 210];
+
+  for (const x of cells) {
+    for (const z of cells) {
+      const dist = Math.hypot(x, z);
+      if (Math.abs(x) < 24 || Math.abs(z) < 24) continue;
+      if (dist < 70 && rng() > 0.35) continue;
+      if (dist > 230 && rng() > 0.45) continue;
+
+      const downtown = dist < 115;
+      const midtown = dist < 175;
+      const count = downtown ? 2 + Math.floor(rng() * 3) : midtown ? 1 + Math.floor(rng() * 3) : 1 + Math.floor(rng() * 2);
+
+      for (let i = 0; i < count; i += 1) {
+        const w = downtown ? 9 + rng() * 9 : midtown ? 8 + rng() * 8 : 6 + rng() * 6;
+        const d = downtown ? 9 + rng() * 9 : midtown ? 8 + rng() * 8 : 6 + rng() * 6;
+        const h = downtown ? 28 + rng() * 50 : midtown ? 14 + rng() * 28 : 6 + rng() * 14;
+        const ox = (rng() - 0.5) * 20;
+        const oz = (rng() - 0.5) * 20;
+        const palette = downtown ? "#5f737d" : midtown ? "#777b70" : "#9a8060";
+        specs.push([x + ox, z + oz, w, h, d, palette]);
+      }
+    }
+  }
+
+  return specs;
+}
+
+function generateCityTrees(): Vector3Tuple[] {
+  const rng = createPrng(351);
+  const trees: Vector3Tuple[] = [];
+  for (let i = 0; i < 180; i += 1) {
+    const x = -230 + rng() * 460;
+    const z = -230 + rng() * 460;
+    if (Math.abs(x) % 36 < 5 || Math.abs(z) % 36 < 5) continue;
+    if (Math.hypot(x, z) < 34) continue;
+    trees.push([x, 0, z]);
+  }
+  return trees;
+}
+
+function generateCityBenches(): Vector3Tuple[] {
+  return [
+    ...baseBenchPositions,
+    [-112, 0, 18],
+    [-84, 0, -92],
+    [-42, 0, 108],
+    [48, 0, -92],
+    [86, 0, 116],
+    [132, 0, -16],
+    [164, 0, 64],
+    [-164, 0, 74],
+    [-186, 0, -42],
+    [18, 0, 196],
+    [196, 0, -86]
+  ];
+}
+
+function generateStreetLights(): Vector3Tuple[] {
+  const lights: Vector3Tuple[] = [];
+  const lines = [-216, -180, -144, -108, -72, -36, 0, 36, 72, 108, 144, 180, 216];
+  for (const x of lines) {
+    for (let z = -216; z <= 216; z += 54) {
+      lights.push([x + 4.2, 0, z]);
+      lights.push([x - 4.2, 0, z + 18]);
+    }
+  }
+  for (const z of lines) {
+    for (let x = -216; x <= 216; x += 54) {
+      lights.push([x, 0, z + 4.2]);
+      lights.push([x + 18, 0, z - 4.2]);
+    }
+  }
+  return lights;
+}
+
+const buildingSpecs: BuildingSpec[] = [...baseBuildingSpecs, ...generateCityBuildings()];
+const treePositions: Vector3Tuple[] = [...baseTreePositions, ...generateCityTrees()];
+const benchPositions: Vector3Tuple[] = generateCityBenches();
+const streetLightPositions: Vector3Tuple[] = [...baseStreetLightPositions, ...generateStreetLights()];
 
 const textureCache = new Map<string, THREE.Texture>();
 
@@ -245,7 +339,7 @@ export function LoungeWorld({ activeLounge, lounges, onSelectGuest }: LoungeWorl
       }}
     >
       <color attach="background" args={["#a9c7d5"]} />
-      <fog attach="fog" args={["#a0b7c0", 95, 245]} />
+      <fog attach="fog" args={["#a0b7c0", 150, 470]} />
       <Sky
         distance={4500}
         sunPosition={[160, 120, 70]}
@@ -261,10 +355,10 @@ export function LoungeWorld({ activeLounge, lounges, onSelectGuest }: LoungeWorl
         castShadow
         position={[52, 70, 34]}
         intensity={2.55}
-        shadow-camera-left={-105}
-        shadow-camera-right={105}
-        shadow-camera-top={105}
-        shadow-camera-bottom={-105}
+        shadow-camera-left={-260}
+        shadow-camera-right={260}
+        shadow-camera-top={260}
+        shadow-camera-bottom={-260}
         shadow-mapSize-width={4096}
         shadow-mapSize-height={4096}
         shadow-bias={-0.00012}
@@ -287,7 +381,6 @@ function OpenCity({ activeLounge, lounges, onSelectGuest }: LoungeWorldProps) {
     <group>
       <Ground />
       <RoadGrid />
-      <DistrictZones activeLounge={activeLounge} lounges={lounges} />
       <Skyline accent={activeLounge.accent} />
       <CityFurniture />
       <StreetLights />
@@ -302,34 +395,6 @@ function OpenCity({ activeLounge, lounges, onSelectGuest }: LoungeWorldProps) {
       {guests.map((guest, index) => (
         <GuestAvatar key={guest.id} guest={guest} index={index} onSelectGuest={onSelectGuest} />
       ))}
-    </group>
-  );
-}
-
-function DistrictZones({ activeLounge, lounges }: { activeLounge: Lounge; lounges: Lounge[] }) {
-  return (
-    <group>
-      {lounges.map((lounge) => {
-        const active = lounge.id === activeLounge.id;
-        return (
-          <group key={lounge.id} position={lounge.center}>
-            <mesh rotation-x={-Math.PI / 2} position={[0, 0.035, 0]}>
-              <circleGeometry args={[lounge.radius, 96]} />
-              <meshStandardMaterial color={lounge.accent} transparent opacity={active ? 0.16 : 0.08} roughness={0.78} />
-            </mesh>
-            <mesh rotation-x={-Math.PI / 2} position={[0, 0.045, 0]}>
-              <ringGeometry args={[lounge.radius - 0.35, lounge.radius, 128]} />
-              <meshStandardMaterial color={lounge.accent} transparent opacity={active ? 0.48 : 0.28} />
-            </mesh>
-            <Html position={[0, 1.15, -lounge.radius + 2.2]} center distanceFactor={18}>
-              <div className={`world-label district ${active ? "active" : ""}`}>
-                <strong>{lounge.name}</strong>
-                <span>{lounge.districtName}</span>
-              </div>
-            </Html>
-          </group>
-        );
-      })}
     </group>
   );
 }
@@ -368,11 +433,11 @@ function Ground() {
   return (
     <group>
       <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, -0.04, 0]}>
-        <planeGeometry args={[200, 200]} />
+        <planeGeometry args={[520, 520]} />
         <meshStandardMaterial color="#6f7f66" roughness={0.96} metalness={0.01} polygonOffset polygonOffsetFactor={2} polygonOffsetUnits={2} />
       </mesh>
       <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, -0.03, 0]}>
-        <circleGeometry args={[38, 128]} />
+        <circleGeometry args={[52, 128]} />
         <meshStandardMaterial
           map={sidewalkTexture}
           color="#ded7c9"
@@ -384,7 +449,7 @@ function Ground() {
         />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.01, 0]}>
-        <ringGeometry args={[37.7, 38.3, 128]} />
+        <ringGeometry args={[51.6, 52.4, 128]} />
         <meshStandardMaterial color="#6f8178" roughness={0.75} />
       </mesh>
     </group>
@@ -393,32 +458,33 @@ function Ground() {
 
 function RoadGrid() {
   const roadTexture = useMemo(() => getRoadTexture(), []);
+  const roadLines = useMemo(() => [-216, -180, -144, -108, -72, -36, 0, 36, 72, 108, 144, 180, 216], []);
   return (
     <group>
-      {[-72, -36, 0, 36, 72].map((x) => (
+      {roadLines.map((x) => (
         <mesh key={`road-x-${x}`} receiveShadow rotation-x={-Math.PI / 2} position={[x, 0, 0]}>
-          <planeGeometry args={[6, 196]} />
+          <planeGeometry args={[x % 72 === 0 ? 8.5 : 5.2, 500]} />
           <meshStandardMaterial map={roadTexture} color="#ffffff" roughness={0.86} metalness={0.02} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
         </mesh>
       ))}
-      {[-72, -36, 0, 36, 72].map((z) => (
+      {roadLines.map((z) => (
         <mesh key={`road-z-${z}`} receiveShadow rotation-x={-Math.PI / 2} rotation-z={Math.PI / 2} position={[0, 0.01, z]}>
-          <planeGeometry args={[196, 6]} />
+          <planeGeometry args={[500, z % 72 === 0 ? 8.5 : 5.2]} />
           <meshStandardMaterial map={roadTexture} color="#ffffff" roughness={0.86} metalness={0.02} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
         </mesh>
       ))}
-      {[-72, -36, 0, 36, 72].flatMap((line) =>
+      {roadLines.flatMap((line) =>
         [-1.45, 1.45].map((offset) => (
           <mesh key={`lane-a-${line}-${offset}`} rotation-x={-Math.PI / 2} position={[line + offset, 0.025, 0]}>
-            <planeGeometry args={[0.08, 188]} />
+            <planeGeometry args={[0.08, 480]} />
             <meshStandardMaterial color="#d8cfad" roughness={0.6} />
           </mesh>
         ))
       )}
-      {[-72, -36, 0, 36, 72].flatMap((line) =>
+      {roadLines.flatMap((line) =>
         [-1.45, 1.45].map((offset) => (
           <mesh key={`lane-b-${line}-${offset}`} rotation-x={-Math.PI / 2} position={[0, 0.03, line + offset]}>
-            <planeGeometry args={[188, 0.08]} />
+            <planeGeometry args={[480, 0.08]} />
             <meshStandardMaterial color="#d8cfad" roughness={0.6} />
           </mesh>
         ))
@@ -539,7 +605,7 @@ function HubSign() {
       <Html position={[0, 2.48, 0.22]} center distanceFactor={12}>
         <div className="world-label sign">
           <strong>Human Connect</strong>
-          <span>창업, 개발, 디자인 구역이 이어진 열린 도시</span>
+          <span>주제와 사람들이 섞여 있는 열린 도시</span>
         </div>
       </Html>
     </group>
@@ -806,6 +872,7 @@ function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
   const verticalVelocity = useRef(0);
   const tables = useMemo(() => lounges.flatMap((lounge) => lounge.tables), [lounges]);
   const guests = useMemo(() => lounges.flatMap((lounge) => lounge.guests), [lounges]);
+  const colliders = useMemo(() => getWorldColliders(lounges), [lounges]);
   const nickname = useLoungeStore((state) => state.nickname);
   const currentTableId = useLoungeStore((state) => state.currentTableId);
   const isJumping = useLoungeStore((state) => state.isJumping);
@@ -881,8 +948,6 @@ function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
 
     const nextX = ref.current.position.x + velocity.x * delta;
     const nextZ = ref.current.position.z + velocity.z * delta;
-    const colliders = getWorldColliders(lounges);
-
     if (!hitsCollider(nextX, ref.current.position.z, colliders)) {
       ref.current.position.x = THREE.MathUtils.clamp(nextX, -WORLD_LIMIT, WORLD_LIMIT);
     } else {
