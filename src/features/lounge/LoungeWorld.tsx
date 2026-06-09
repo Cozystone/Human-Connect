@@ -1,6 +1,6 @@
 "use client";
 
-import { Environment, Float, Text } from "@react-three/drei";
+import { Cloud, Environment, Float, Sky, Stars, Text } from "@react-three/drei";
 import { Canvas, ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -22,6 +22,12 @@ type Collider = {
   z: number;
   halfX: number;
   halfZ: number;
+};
+
+const BUILDING_PALETTES = {
+  skyscraper: ["#2a5a78", "#1e4a68", "#1a3a58", "#3a6a88", "#1c4860"],
+  office: ["#5a6a5a", "#6a7060", "#7a8070", "#5a6050", "#6a6850"],
+  apartment: ["#9a7a60", "#a08070", "#c09a80", "#b08870", "#9a8060"]
 };
 
 const treePositions: Vector3Tuple[] = [
@@ -78,6 +84,148 @@ const podPositions: Vector3Tuple[] = [
   [0, 0, 66]
 ];
 
+const streetLightPositions: Vector3Tuple[] = [
+  [-72, 0, -28],
+  [-72, 0, 28],
+  [-36, 0, -52],
+  [-36, 0, 52],
+  [0, 0, -64],
+  [0, 0, 64],
+  [36, 0, -52],
+  [36, 0, 52],
+  [72, 0, -28],
+  [72, 0, 28],
+  [-22, 0, -2],
+  [22, 0, -2],
+  [-14, 0, 24],
+  [14, 0, 24]
+];
+
+const textureCache = new Map<string, THREE.Texture>();
+
+function getWindowTexture(kind: keyof typeof BUILDING_PALETTES) {
+  const key = `windows-${kind}`;
+  const cached = textureCache.get(key);
+  if (cached) return cached;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 1024;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D context is unavailable");
+
+  const wall = {
+    skyscraper: "#30485a",
+    office: "#66715f",
+    apartment: "#8f725c"
+  }[kind];
+  const config = {
+    skyscraper: { cols: 10, rows: 32, lit: 0.56, window: "#9cc6df" },
+    office: { cols: 7, rows: 22, lit: 0.48, window: "#b7d0cf" },
+    apartment: { cols: 5, rows: 16, lit: 0.52, window: "#f0cf83" }
+  }[kind];
+
+  ctx.fillStyle = wall;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const cellW = canvas.width / config.cols;
+  const cellH = canvas.height / config.rows;
+  const winW = cellW * 0.56;
+  const winH = cellH * 0.5;
+
+  for (let row = 0; row < config.rows; row += 1) {
+    for (let col = 0; col < config.cols; col += 1) {
+      const x = col * cellW + (cellW - winW) / 2;
+      const y = row * cellH + (cellH - winH) / 2;
+      const lit = Math.random() < config.lit;
+      ctx.fillStyle = lit ? config.window : "#07101a";
+      ctx.fillRect(x, y, winW, winH);
+      if (lit) {
+        ctx.fillStyle = "rgba(255, 234, 176, 0.32)";
+        ctx.fillRect(x + 1, y + 1, winW - 2, 2);
+      }
+    }
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.anisotropy = 8;
+  textureCache.set(key, texture);
+  return texture;
+}
+
+function getRoadTexture() {
+  const cached = textureCache.get("road");
+  if (cached) return cached;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D context is unavailable");
+
+  ctx.fillStyle = "#202322";
+  ctx.fillRect(0, 0, 512, 512);
+  ctx.fillStyle = "rgba(255,255,255,0.025)";
+  for (let i = 0; i < 130; i += 1) {
+    ctx.fillRect(Math.random() * 512, Math.random() * 512, 20 + Math.random() * 70, 1 + Math.random() * 3);
+  }
+  ctx.strokeStyle = "#e6d36e";
+  ctx.setLineDash([44, 34]);
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(256, 0);
+  ctx.lineTo(256, 512);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = "#e8edf0";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(28, 0);
+  ctx.lineTo(28, 512);
+  ctx.moveTo(484, 0);
+  ctx.lineTo(484, 512);
+  ctx.stroke();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1, 5);
+  texture.anisotropy = 8;
+  textureCache.set("road", texture);
+  return texture;
+}
+
+function getSidewalkTexture() {
+  const cached = textureCache.get("sidewalk");
+  if (cached) return cached;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas 2D context is unavailable");
+
+  ctx.fillStyle = "#bbb3a4";
+  ctx.fillRect(0, 0, 256, 256);
+  ctx.strokeStyle = "#958d80";
+  ctx.lineWidth = 1.5;
+  for (let p = 0; p <= 256; p += 32) {
+    ctx.beginPath();
+    ctx.moveTo(p, 0);
+    ctx.lineTo(p, 256);
+    ctx.moveTo(0, p);
+    ctx.lineTo(256, p);
+    ctx.stroke();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(24, 24);
+  texture.anisotropy = 8;
+  textureCache.set("sidewalk", texture);
+  return texture;
+}
+
 export function LoungeWorld({ lounge, onSelectGuest }: LoungeWorldProps) {
   return (
     <Canvas
@@ -92,10 +240,19 @@ export function LoungeWorld({ lounge, onSelectGuest }: LoungeWorldProps) {
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
       }}
     >
-      <color attach="background" args={["#a8c7cd"]} />
-      <fog attach="fog" args={["#a8c7cd", 48, 155]} />
-      <ambientLight intensity={0.48} />
-      <hemisphereLight args={["#dceff1", "#47554e", 0.64]} />
+      <color attach="background" args={["#9bb8c3"]} />
+      <fog attach="fog" args={["#8ba2ad", 55, 190]} />
+      <Sky
+        distance={4500}
+        sunPosition={[120, 80, 60]}
+        turbidity={4.2}
+        rayleigh={1.55}
+        mieCoefficient={0.006}
+        mieDirectionalG={0.86}
+      />
+      <Stars radius={900} depth={60} count={2200} factor={3.5} fade speed={0.15} />
+      <ambientLight intensity={0.36} color="#b3c7d6" />
+      <hemisphereLight args={["#b9d5e2", "#354335", 0.72]} />
       <directionalLight
         castShadow
         position={[35, 52, 28]}
@@ -108,6 +265,7 @@ export function LoungeWorld({ lounge, onSelectGuest }: LoungeWorldProps) {
         shadow-mapSize-height={4096}
       />
       <Environment preset="city" />
+      <AtmosphericClouds />
       <OpenCity lounge={lounge} onSelectGuest={onSelectGuest} />
       <Player lounge={lounge} onSelectGuest={onSelectGuest} />
       <CameraRig />
@@ -122,6 +280,7 @@ function OpenCity({ lounge, onSelectGuest }: LoungeWorldProps) {
       <RoadGrid />
       <Skyline accent={lounge.accent} />
       <CityFurniture />
+      <StreetLights />
       <HubSign lounge={lounge} />
       <Stage accent={lounge.accent} />
       <PrivatePods />
@@ -137,16 +296,46 @@ function OpenCity({ lounge, onSelectGuest }: LoungeWorldProps) {
   );
 }
 
+function AtmosphericClouds() {
+  const clouds = useMemo(
+    () => [
+      [-180, 95, -120, 46, 12, 28, 0.26],
+      [80, 115, -160, 70, 16, 36, 0.22],
+      [175, 90, 80, 54, 14, 30, 0.24],
+      [-120, 130, 150, 78, 18, 42, 0.2],
+      [20, 150, 210, 92, 20, 52, 0.18]
+    ] as const,
+    []
+  );
+
+  return (
+    <>
+      {clouds.map(([x, y, z, sx, sy, sz, opacity], index) => (
+        <Cloud
+          key={index}
+          position={[x, y, z]}
+          speed={0}
+          opacity={opacity}
+          scale={[sx, sy, sz]}
+          segments={18}
+          color="#edf3f6"
+        />
+      ))}
+    </>
+  );
+}
+
 function Ground() {
+  const sidewalkTexture = useMemo(() => getSidewalkTexture(), []);
   return (
     <group>
       <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, -0.04, 0]}>
         <planeGeometry args={[200, 200]} />
-        <meshStandardMaterial color="#96a889" roughness={0.94} />
+        <meshStandardMaterial color="#6f7f66" roughness={0.96} metalness={0.01} />
       </mesh>
       <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, -0.03, 0]}>
         <circleGeometry args={[38, 128]} />
-        <meshStandardMaterial color="#d7d0bc" roughness={0.86} />
+        <meshStandardMaterial map={sidewalkTexture} color="#ded7c9" roughness={0.9} metalness={0.01} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.01, 0]}>
         <ringGeometry args={[37.7, 38.3, 128]} />
@@ -157,18 +346,19 @@ function Ground() {
 }
 
 function RoadGrid() {
+  const roadTexture = useMemo(() => getRoadTexture(), []);
   return (
     <group>
       {[-72, -36, 0, 36, 72].map((x) => (
         <mesh key={`road-x-${x}`} receiveShadow rotation-x={-Math.PI / 2} position={[x, 0, 0]}>
           <planeGeometry args={[6, 196]} />
-          <meshStandardMaterial color="#59625c" roughness={0.8} />
+          <meshStandardMaterial map={roadTexture} color="#ffffff" roughness={0.86} metalness={0.02} />
         </mesh>
       ))}
       {[-72, -36, 0, 36, 72].map((z) => (
-        <mesh key={`road-z-${z}`} receiveShadow rotation-x={-Math.PI / 2} position={[0, 0.01, z]}>
+        <mesh key={`road-z-${z}`} receiveShadow rotation-x={-Math.PI / 2} rotation-z={Math.PI / 2} position={[0, 0.01, z]}>
           <planeGeometry args={[196, 6]} />
-          <meshStandardMaterial color="#59625c" roughness={0.8} />
+          <meshStandardMaterial map={roadTexture} color="#ffffff" roughness={0.86} metalness={0.02} />
         </mesh>
       ))}
       {[-72, -36, 0, 36, 72].flatMap((line) =>
@@ -194,11 +384,24 @@ function RoadGrid() {
 function Skyline({ accent }: { accent: string }) {
   return (
     <group>
-      {buildingSpecs.map(([x, z, w, h, d, color], index) => (
+      {buildingSpecs.map(([x, z, w, h, d, color], index) => {
+        const kind = getBuildingKind(h);
+        const texture = getWindowTexture(kind);
+        const isGlass = kind === "skyscraper";
+        const palette = BUILDING_PALETTES[kind];
+        const facade = index % 4 === 0 ? accent : palette[index % palette.length] ?? color;
+
+        return (
         <group key={`${x}-${z}`} position={[x, 0, z]}>
           <mesh castShadow receiveShadow position={[0, h / 2, 0]}>
             <boxGeometry args={[w, h, d]} />
-            <meshStandardMaterial color={index % 4 === 0 ? accent : color} roughness={0.62} metalness={0.08} />
+            <meshStandardMaterial
+              map={texture}
+              color={facade}
+              roughness={isGlass ? 0.26 : 0.72}
+              metalness={isGlass ? 0.42 : 0.06}
+              envMapIntensity={isGlass ? 0.9 : 0.24}
+            />
           </mesh>
           <mesh position={[0, h + 0.08, 0]}>
             <boxGeometry args={[w * 0.78, 0.16, d * 0.78]} />
@@ -210,6 +413,27 @@ function Skyline({ accent }: { accent: string }) {
               <meshStandardMaterial color="#f1dca3" emissive="#c89539" emissiveIntensity={0.12} />
             </mesh>
           ))}
+        </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function StreetLights() {
+  return (
+    <group>
+      {streetLightPositions.map(([x, , z], index) => (
+        <group key={index} position={[x, 0, z]}>
+          <mesh castShadow position={[0, 2.2, 0]}>
+            <cylinderGeometry args={[0.08, 0.11, 4.4, 8]} />
+            <meshStandardMaterial color="#353838" roughness={0.32} metalness={0.82} />
+          </mesh>
+          <mesh position={[0, 4.55, 0]}>
+            <boxGeometry args={[0.65, 0.25, 0.65]} />
+            <meshStandardMaterial color="#fff6c2" emissive="#ffd879" emissiveIntensity={1.6} roughness={0.25} />
+          </mesh>
+          {index < 6 ? <pointLight position={[0, 4.45, 0]} intensity={0.42} distance={16} color="#ffd98a" /> : null}
         </group>
       ))}
     </group>
@@ -687,6 +911,13 @@ function getWorldColliders(lounge: Lounge): Collider[] {
     halfZ: 2.8
   }));
 
+  const lightColliders = streetLightPositions.map(([x, , z]) => ({
+    x,
+    z,
+    halfX: 0.38,
+    halfZ: 0.38
+  }));
+
   return [
     ...buildingColliders,
     ...tableColliders,
@@ -694,9 +925,16 @@ function getWorldColliders(lounge: Lounge): Collider[] {
     ...treeColliders,
     ...benchColliders,
     ...podColliders,
+    ...lightColliders,
     { x: 0, z: 18, halfX: 6.2, halfZ: 2.6 },
     { x: 0, z: -20, halfX: 5.5, halfZ: 0.9 }
   ];
+}
+
+function getBuildingKind(height: number): keyof typeof BUILDING_PALETTES {
+  if (height >= 28) return "skyscraper";
+  if (height >= 20) return "office";
+  return "apartment";
 }
 
 function hitsCollider(x: number, z: number, colliders: Collider[]) {
