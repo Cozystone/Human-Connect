@@ -741,15 +741,17 @@ button.game-map {
   border: 1px solid rgba(23, 32, 29, 0.16);
   border-radius: 8px;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-    radial-gradient(circle at 50% 50%, #52695f, #27342f);
-  background-size: 28px 28px, 28px 28px, auto;
+    linear-gradient(rgba(92, 84, 72, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(92, 84, 72, 0.12) 1px, transparent 1px),
+    radial-gradient(circle at 30% 25%, rgba(198, 208, 189, 0.9), transparent 24%),
+    radial-gradient(circle at 76% 70%, rgba(190, 201, 180, 0.9), transparent 20%),
+    #d7d0c0;
+  background-size: 36px 36px, 36px 36px, auto, auto, auto;
 }
 
 .full-map-road {
   position: absolute;
-  background: rgba(23, 28, 29, 0.46);
+  background: rgba(36, 42, 43, 0.62);
 }
 
 .full-map-road.vertical {

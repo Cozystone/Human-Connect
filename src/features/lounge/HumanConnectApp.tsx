@@ -426,15 +426,18 @@ function GameMinimap({
 
     ctx.clearRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
 
-    const bg = ctx.createRadialGradient(MINIMAP_SIZE / 2, MINIMAP_SIZE / 2, 16, MINIMAP_SIZE / 2, MINIMAP_SIZE / 2, MINIMAP_SIZE / 2);
-    bg.addColorStop(0, "#52695f");
-    bg.addColorStop(0.55, "#394e45");
-    bg.addColorStop(1, "#24312d");
-    ctx.fillStyle = bg;
+    ctx.fillStyle = "#d7d0c0";
     ctx.fillRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
 
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 1;
+    ctx.fillStyle = "#c6d0bd";
+    for (let x = 6; x < MINIMAP_SIZE; x += 36) {
+      for (let y = 9; y < MINIMAP_SIZE; y += 34) {
+        if ((x + y) % 3 === 0) ctx.fillRect(x, y, 20, 16);
+      }
+    }
+
+    ctx.strokeStyle = "rgba(92,84,72,0.16)";
+    ctx.lineWidth = 0.8;
     for (let i = 0; i <= MINIMAP_SIZE; i += 23) {
       ctx.beginPath();
       ctx.moveTo(i, 0);
@@ -444,8 +447,8 @@ function GameMinimap({
       ctx.stroke();
     }
 
-    ctx.strokeStyle = "rgba(235,238,232,0.55)";
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = "rgba(36,42,43,0.72)";
+    ctx.lineWidth = 3.6;
     [-216, -180, -144, -108, -72, -36, 0, 36, 72, 108, 144, 180, 216].forEach((line) => {
       const a = toMap(line, -MAP_LIMIT);
       const b = toMap(line, MAP_LIMIT);
@@ -456,6 +459,24 @@ function GameMinimap({
 
       const c = toMap(-MAP_LIMIT, line);
       const d = toMap(MAP_LIMIT, line);
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.lineTo(d.x, d.y);
+      ctx.stroke();
+    });
+
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 0.8;
+    [-216, -144, -72, 0, 72, 144, 216].forEach((line) => {
+      const a = toMap(line + 2.4, -MAP_LIMIT);
+      const b = toMap(line + 2.4, MAP_LIMIT);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+
+      const c = toMap(-MAP_LIMIT, line + 2.4);
+      const d = toMap(MAP_LIMIT, line + 2.4);
       ctx.beginPath();
       ctx.moveTo(c.x, c.y);
       ctx.lineTo(d.x, d.y);

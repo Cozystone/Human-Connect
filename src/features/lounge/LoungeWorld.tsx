@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Cloud, Environment, Float, Html, Sky, Stars } from "@react-three/drei";
+import { Environment, Float, Html, Sky } from "@react-three/drei";
 import { Canvas, ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -120,23 +120,24 @@ function createPrng(seed = 42) {
 function generateCityBuildings(): BuildingSpec[] {
   const rng = createPrng(991);
   const specs: BuildingSpec[] = [];
-  const cells = [-210, -174, -138, -102, -66, -30, 30, 66, 102, 138, 174, 210];
+  const cells = [-180, -120, -60, 60, 120, 180];
 
   for (const x of cells) {
     for (const z of cells) {
       const dist = Math.hypot(x, z);
       if (Math.abs(x) < 24 || Math.abs(z) < 24) continue;
-      if (dist < 70 && rng() > 0.35) continue;
-      if (dist > 230 && rng() > 0.45) continue;
+      if (dist < 70 && rng() > 0.18) continue;
+      if (dist > 210 && rng() > 0.24) continue;
+      if (rng() > 0.62) continue;
 
       const downtown = dist < 115;
       const midtown = dist < 175;
-      const count = downtown ? 2 + Math.floor(rng() * 3) : midtown ? 1 + Math.floor(rng() * 3) : 1 + Math.floor(rng() * 2);
+      const count = downtown ? 1 + Math.floor(rng() * 2) : midtown ? 1 + Math.floor(rng() * 2) : 1;
 
       for (let i = 0; i < count; i += 1) {
         const w = downtown ? 9 + rng() * 9 : midtown ? 8 + rng() * 8 : 6 + rng() * 6;
         const d = downtown ? 9 + rng() * 9 : midtown ? 8 + rng() * 8 : 6 + rng() * 6;
-        const h = downtown ? 28 + rng() * 50 : midtown ? 14 + rng() * 28 : 6 + rng() * 14;
+        const h = downtown ? 22 + rng() * 34 : midtown ? 12 + rng() * 20 : 6 + rng() * 12;
         const ox = (rng() - 0.5) * 20;
         const oz = (rng() - 0.5) * 20;
         const palette = downtown ? "#5f737d" : midtown ? "#777b70" : "#9a8060";
@@ -151,7 +152,7 @@ function generateCityBuildings(): BuildingSpec[] {
 function generateCityTrees(): Vector3Tuple[] {
   const rng = createPrng(351);
   const trees: Vector3Tuple[] = [];
-  for (let i = 0; i < 180; i += 1) {
+  for (let i = 0; i < 78; i += 1) {
     const x = -230 + rng() * 460;
     const z = -230 + rng() * 460;
     if (Math.abs(x) % 36 < 5 || Math.abs(z) % 36 < 5) continue;
@@ -180,15 +181,15 @@ function generateCityBenches(): Vector3Tuple[] {
 
 function generateStreetLights(): Vector3Tuple[] {
   const lights: Vector3Tuple[] = [];
-  const lines = [-216, -180, -144, -108, -72, -36, 0, 36, 72, 108, 144, 180, 216];
+  const lines = [-216, -144, -72, 0, 72, 144, 216];
   for (const x of lines) {
-    for (let z = -216; z <= 216; z += 54) {
+    for (let z = -216; z <= 216; z += 108) {
       lights.push([x + 4.2, 0, z]);
       lights.push([x - 4.2, 0, z + 18]);
     }
   }
   for (const z of lines) {
-    for (let x = -216; x <= 216; x += 54) {
+    for (let x = -216; x <= 216; x += 108) {
       lights.push([x, 0, z + 4.2]);
       lights.push([x + 18, 0, z - 4.2]);
     }
@@ -331,13 +332,13 @@ export function LoungeWorld({ activeLounge, lounges, onSelectGuest, onSelectNpc 
     <Canvas
       shadows
       camera={{ position: [0, 10, 14], fov: 48 }}
-      dpr={[1, 1.85]}
+      dpr={[1, 1.25]}
       gl={{ antialias: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.05;
         gl.shadowMap.enabled = true;
-        gl.shadowMap.type = THREE.PCFSoftShadowMap;
+        gl.shadowMap.type = THREE.PCFShadowMap;
       }}
     >
       <color attach="background" args={["#a9c7d5"]} />
@@ -350,7 +351,6 @@ export function LoungeWorld({ activeLounge, lounges, onSelectGuest, onSelectNpc 
         mieCoefficient={0.006}
         mieDirectionalG={0.9}
       />
-      <Stars radius={1200} depth={80} count={900} factor={2.4} fade speed={0.08} />
       <ambientLight intensity={0.32} color="#bdd4df" />
       <hemisphereLight args={["#c9e0e9", "#43543c", 0.82]} />
       <directionalLight
@@ -361,13 +361,12 @@ export function LoungeWorld({ activeLounge, lounges, onSelectGuest, onSelectNpc 
         shadow-camera-right={260}
         shadow-camera-top={260}
         shadow-camera-bottom={-260}
-        shadow-mapSize-width={4096}
-        shadow-mapSize-height={4096}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
         shadow-bias={-0.00012}
         shadow-normalBias={0.045}
       />
       <Environment preset="city" />
-      <AtmosphericClouds />
       <OpenCity activeLounge={activeLounge} lounges={lounges} onSelectGuest={onSelectGuest} onSelectNpc={onSelectNpc} />
       <Player activeLounge={activeLounge} lounges={lounges} onSelectGuest={onSelectGuest} onSelectNpc={onSelectNpc} />
       <CameraRig />
@@ -401,35 +400,6 @@ function OpenCity({ activeLounge, lounges, onSelectGuest, onSelectNpc }: LoungeW
         <NpcAvatar key={npc.id} npc={npc} index={index} onSelectNpc={onSelectNpc} />
       ))}
     </group>
-  );
-}
-
-function AtmosphericClouds() {
-  const clouds = useMemo(
-    () => [
-      [-180, 95, -120, 46, 12, 28, 0.26],
-      [80, 115, -160, 70, 16, 36, 0.22],
-      [175, 90, 80, 54, 14, 30, 0.24],
-      [-120, 130, 150, 78, 18, 42, 0.2],
-      [20, 150, 210, 92, 20, 52, 0.18]
-    ] as const,
-    []
-  );
-
-  return (
-    <>
-      {clouds.map(([x, y, z, sx, sy, sz, opacity], index) => (
-        <Cloud
-          key={index}
-          position={[x, y, z]}
-          speed={0}
-          opacity={opacity}
-          scale={[sx, sy, sz]}
-          segments={18}
-          color="#edf3f6"
-        />
-      ))}
-    </>
   );
 }
 
