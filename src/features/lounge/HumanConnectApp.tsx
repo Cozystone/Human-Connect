@@ -6,6 +6,9 @@ import { getLounge, lounges, type Guest } from "./loungeData";
 import { useLoungeStore } from "./loungeStore";
 import { LoungeWorld } from "./LoungeWorld";
 
+const NEAR_GUEST_RADIUS = 5.2;
+const NEAR_TABLE_RADIUS = 6.8;
+
 export function HumanConnectApp() {
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
   const [nameDraft, setNameDraft] = useState("Guest Builder");
@@ -16,6 +19,7 @@ export function HumanConnectApp() {
     interests,
     currentTableId,
     privateGuestId,
+    playerPosition,
     muted,
     toast,
     mode,
@@ -35,6 +39,22 @@ export function HumanConnectApp() {
   const lounge = useMemo(() => getLounge(loungeId), [loungeId]);
   const currentTable = lounge.tables.find((table) => table.id === currentTableId);
   const privateGuest = lounge.guests.find((guest) => guest.id === privateGuestId);
+  const nearbyGuests = useMemo(
+    () =>
+      lounge.guests
+        .map((guest) => ({ guest, distance: planarDistance(playerPosition, guest.position) }))
+        .sort((a, b) => a.distance - b.distance),
+    [lounge.guests, playerPosition]
+  );
+  const closestGuest = nearbyGuests.find((item) => item.distance <= NEAR_GUEST_RADIUS);
+  const closestTable = useMemo(
+    () =>
+      lounge.tables
+        .map((table) => ({ table, distance: planarDistance(playerPosition, table.position) }))
+        .sort((a, b) => a.distance - b.distance)
+        .find((item) => item.distance <= NEAR_TABLE_RADIUS),
+    [lounge.tables, playerPosition]
+  );
 
   useEffect(() => {
     if (!toast) return;
@@ -125,6 +145,23 @@ export function HumanConnectApp() {
           ) : null}
         </div>
 
+        <div className="nearby-card">
+          <strong>
+            {closestGuest
+              ? `${closestGuest.guest.name} is nearby`
+              : closestTable
+                ? `${closestTable.table.label} is nearby`
+                : "Explore the city"}
+          </strong>
+          <span>
+            {closestGuest
+              ? "Press E or open their card to wave, request a pod, report, or block."
+              : closestTable
+                ? "Press E or click the zone to sit at this topic table."
+                : "Walk the open plaza. Interactions unlock when you approach people or tables."}
+          </span>
+        </div>
+
         <h3 className="section-title">Topic tables</h3>
         <div className="table-list">
           {lounge.tables.map((table) => (
@@ -148,11 +185,17 @@ export function HumanConnectApp() {
 
         <h3 className="section-title">People nearby</h3>
         <div className="people-list">
-          {lounge.guests.map((guest) => (
-            <button className="person-card" key={guest.id} onClick={() => setSelectedGuest(guest)} type="button">
+          {nearbyGuests.map(({ guest, distance }) => (
+            <button
+              className={`person-card ${distance <= NEAR_GUEST_RADIUS ? "near" : ""}`}
+              key={guest.id}
+              onClick={() => setSelectedGuest(guest)}
+              type="button"
+            >
               <strong>{guest.name}</strong>
               <span>{guest.role}</span>
               <div className="person-meta">
+                <span className="pill">{distance.toFixed(1)}m</span>
                 {guest.interests.map((interest) => (
                   <span className="pill" key={interest}>
                     {interest}
@@ -245,8 +288,14 @@ export function HumanConnectApp() {
         </section>
       ) : null}
 
-      <div className="hud-help">WASD to move · click avatars or tables · space for a wave</div>
+      <div className="hud-help">WASD to roam · E to interact nearby · click avatars or table zones · space to wave</div>
       {toast ? <div className="toast">{toast}</div> : null}
     </main>
   );
+}
+
+function planarDistance(a: [number, number, number], b: [number, number, number]) {
+  const dx = a[0] - b[0];
+  const dz = a[2] - b[2];
+  return Math.sqrt(dx * dx + dz * dz);
 }

@@ -44,7 +44,7 @@ export const lounges: Lounge[] = [
         topic: "MVP scope and first customer signal",
         seats: 6,
         occupied: 4,
-        position: [-3.2, 0, -1.1],
+        position: [-12, 0, -7],
         color: "#2b8c73"
       },
       {
@@ -53,7 +53,7 @@ export const lounges: Lounge[] = [
         topic: "Pitch clarity, traction, investor fit",
         seats: 5,
         occupied: 2,
-        position: [0.4, 0, -2.4],
+        position: [3, 0, -12],
         color: "#e1a13a"
       },
       {
@@ -62,7 +62,7 @@ export const lounges: Lounge[] = [
         topic: "Finding cofounders and early collaborators",
         seats: 6,
         occupied: 3,
-        position: [3.2, 0, -0.9],
+        position: [14, 0, -4],
         color: "#87b7c7"
       }
     ],
@@ -72,7 +72,7 @@ export const lounges: Lounge[] = [
         name: "Mina",
         role: "Product founder",
         interests: ["MVP", "AI service", "B2B"],
-        position: [-4.2, 0, 0.8],
+        position: [-9.5, 0, -4.2],
         color: "#d97862"
       },
       {
@@ -80,7 +80,7 @@ export const lounges: Lounge[] = [
         name: "Jun",
         role: "Design partner",
         interests: ["UX", "brand", "feedback"],
-        position: [2.5, 0, 1.3],
+        position: [8, 0, -1],
         color: "#5b8fb9"
       },
       {
@@ -88,7 +88,7 @@ export const lounges: Lounge[] = [
         name: "Ari",
         role: "Angel mentor",
         interests: ["traction", "pitch", "network"],
-        position: [4.4, 0, -2.3],
+        position: [18, 0, -8],
         color: "#9a6fb0"
       }
     ]
@@ -106,7 +106,7 @@ export const lounges: Lounge[] = [
         topic: "App Router, deployments, performance",
         seats: 6,
         occupied: 5,
-        position: [-3.2, 0, -1.1],
+        position: [-12, 0, -7],
         color: "#3d78a5"
       },
       {
@@ -115,7 +115,7 @@ export const lounges: Lounge[] = [
         topic: "Agents, evaluations, product workflows",
         seats: 6,
         occupied: 3,
-        position: [0.4, 0, -2.4],
+        position: [3, 0, -12],
         color: "#2b8c73"
       },
       {
@@ -124,7 +124,7 @@ export const lounges: Lounge[] = [
         topic: "Maintainers, contributors, project fit",
         seats: 5,
         occupied: 1,
-        position: [3.2, 0, -0.9],
+        position: [14, 0, -4],
         color: "#d18f35"
       }
     ],
@@ -134,7 +134,7 @@ export const lounges: Lounge[] = [
         name: "Nora",
         role: "Frontend engineer",
         interests: ["React", "accessibility", "R3F"],
-        position: [-4.2, 0, 0.8],
+        position: [-9.5, 0, -4.2],
         color: "#5b8fb9"
       },
       {
@@ -142,7 +142,7 @@ export const lounges: Lounge[] = [
         name: "Tae",
         role: "Platform engineer",
         interests: ["infra", "realtime", "DX"],
-        position: [2.5, 0, 1.3],
+        position: [8, 0, -1],
         color: "#61a675"
       },
       {
@@ -150,7 +150,7 @@ export const lounges: Lounge[] = [
         name: "Sol",
         role: "AI app builder",
         interests: ["agents", "voice", "evals"],
-        position: [4.4, 0, -2.3],
+        position: [18, 0, -8],
         color: "#9a6fb0"
       }
     ]
@@ -168,7 +168,7 @@ export const lounges: Lounge[] = [
         topic: "Case studies, signal, presentation",
         seats: 5,
         occupied: 2,
-        position: [-3.2, 0, -1.1],
+        position: [-12, 0, -7],
         color: "#b15f73"
       },
       {
@@ -177,7 +177,7 @@ export const lounges: Lounge[] = [
         topic: "Flows, hierarchy, friction",
         seats: 6,
         occupied: 4,
-        position: [0.4, 0, -2.4],
+        position: [3, 0, -12],
         color: "#2b8c73"
       },
       {
@@ -186,7 +186,7 @@ export const lounges: Lounge[] = [
         topic: "Identity, narrative, launch assets",
         seats: 5,
         occupied: 3,
-        position: [3.2, 0, -0.9],
+        position: [14, 0, -4],
         color: "#e1a13a"
       }
     ],
@@ -196,7 +196,7 @@ export const lounges: Lounge[] = [
         name: "Yuna",
         role: "UX designer",
         interests: ["flows", "prototypes", "research"],
-        position: [-4.2, 0, 0.8],
+        position: [-9.5, 0, -4.2],
         color: "#d97862"
       },
       {
@@ -204,7 +204,7 @@ export const lounges: Lounge[] = [
         name: "Kai",
         role: "Brand designer",
         interests: ["systems", "launch", "typography"],
-        position: [2.5, 0, 1.3],
+        position: [8, 0, -1],
         color: "#6f8cc7"
       },
       {
@@ -212,7 +212,7 @@ export const lounges: Lounge[] = [
         name: "Ren",
         role: "Creative technologist",
         interests: ["motion", "3D", "installations"],
-        position: [4.4, 0, -2.3],
+        position: [18, 0, -8],
         color: "#61a675"
       }
     ]

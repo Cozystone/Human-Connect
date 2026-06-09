@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { LoungeId } from "./loungeData";
+import type { LoungeId, Vector3Tuple } from "./loungeData";
 
 type ConversationMode = "floor" | "table" | "private";
 
@@ -11,12 +11,14 @@ type LoungeState = {
   interests: string[];
   currentTableId: string | null;
   privateGuestId: string | null;
+  playerPosition: Vector3Tuple;
   muted: boolean;
   blockedGuestIds: string[];
   toast: string | null;
   mode: ConversationMode;
   setLounge: (loungeId: LoungeId) => void;
   enterAsGuest: (nickname: string, interests: string[]) => void;
+  setPlayerPosition: (position: Vector3Tuple) => void;
   joinTable: (tableId: string) => void;
   leaveTable: () => void;
   requestPrivate: (guestId: string, guestName: string) => void;
@@ -34,6 +36,7 @@ export const useLoungeStore = create<LoungeState>((set, get) => ({
   interests: ["startup", "design", "AI"],
   currentTableId: null,
   privateGuestId: null,
+  playerPosition: [0, 0, 7],
   muted: false,
   blockedGuestIds: [],
   toast: "Choose a lounge, walk with WASD, and join a table when the topic fits.",
@@ -52,6 +55,7 @@ export const useLoungeStore = create<LoungeState>((set, get) => ({
       interests: interests.length ? interests : ["curious"],
       toast: "Guest profile updated. You can stay anonymous until a conversation feels real."
     }),
+  setPlayerPosition: (playerPosition) => set({ playerPosition }),
   joinTable: (tableId) =>
     set({
       currentTableId: tableId,

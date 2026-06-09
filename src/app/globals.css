@@ -279,9 +279,34 @@ button {
   color: inherit;
 }
 
+.person-card.near {
+  border-color: rgba(43, 140, 115, 0.7);
+  background: rgba(43, 140, 115, 0.13);
+}
+
 .person-card strong {
   display: block;
   margin-bottom: 4px;
+}
+
+.nearby-card {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0 14px;
+  border: 1px solid rgba(43, 140, 115, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+  padding: 10px;
+}
+
+.nearby-card strong {
+  font-size: 14px;
+}
+
+.nearby-card span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .entry-panel {
