@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { Cloud, Environment, Float, Sky, Stars, Text } from "@react-three/drei";
+import { Cloud, Environment, Float, Html, Sky, Stars } from "@react-three/drei";
 import { Canvas, ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -8,7 +8,8 @@ import type { Guest, Lounge, TopicTable, Vector3Tuple } from "./loungeData";
 import { useLoungeStore } from "./loungeStore";
 
 type LoungeWorldProps = {
-  lounge: Lounge;
+  activeLounge: Lounge;
+  lounges: Lounge[];
   onSelectGuest: (guest: Guest) => void;
 };
 
@@ -226,7 +227,7 @@ function getSidewalkTexture() {
   return texture;
 }
 
-export function LoungeWorld({ lounge, onSelectGuest }: LoungeWorldProps) {
+export function LoungeWorld({ activeLounge, lounges, onSelectGuest }: LoungeWorldProps) {
   return (
     <Canvas
       shadows
@@ -266,32 +267,64 @@ export function LoungeWorld({ lounge, onSelectGuest }: LoungeWorldProps) {
       />
       <Environment preset="city" />
       <AtmosphericClouds />
-      <OpenCity lounge={lounge} onSelectGuest={onSelectGuest} />
-      <Player lounge={lounge} onSelectGuest={onSelectGuest} />
+      <OpenCity activeLounge={activeLounge} lounges={lounges} onSelectGuest={onSelectGuest} />
+      <Player activeLounge={activeLounge} lounges={lounges} onSelectGuest={onSelectGuest} />
       <CameraRig />
     </Canvas>
   );
 }
 
-function OpenCity({ lounge, onSelectGuest }: LoungeWorldProps) {
+function OpenCity({ activeLounge, lounges, onSelectGuest }: LoungeWorldProps) {
+  const tables = useMemo(() => lounges.flatMap((lounge) => lounge.tables), [lounges]);
+  const guests = useMemo(() => lounges.flatMap((lounge) => lounge.guests), [lounges]);
+
   return (
     <group>
       <Ground />
       <RoadGrid />
-      <Skyline accent={lounge.accent} />
+      <DistrictZones activeLounge={activeLounge} lounges={lounges} />
+      <Skyline accent={activeLounge.accent} />
       <CityFurniture />
       <StreetLights />
-      <HubSign lounge={lounge} />
-      <Stage accent={lounge.accent} />
+      <HubSign />
+      <Stage accent={activeLounge.accent} />
       <PrivatePods />
 
-      {lounge.tables.map((table) => (
+      {tables.map((table) => (
         <TopicTableMesh key={table.id} table={table} />
       ))}
 
-      {lounge.guests.map((guest, index) => (
+      {guests.map((guest, index) => (
         <GuestAvatar key={guest.id} guest={guest} index={index} onSelectGuest={onSelectGuest} />
       ))}
+    </group>
+  );
+}
+
+function DistrictZones({ activeLounge, lounges }: { activeLounge: Lounge; lounges: Lounge[] }) {
+  return (
+    <group>
+      {lounges.map((lounge) => {
+        const active = lounge.id === activeLounge.id;
+        return (
+          <group key={lounge.id} position={lounge.center}>
+            <mesh rotation-x={-Math.PI / 2} position={[0, 0.035, 0]}>
+              <circleGeometry args={[lounge.radius, 96]} />
+              <meshStandardMaterial color={lounge.accent} transparent opacity={active ? 0.16 : 0.08} roughness={0.78} />
+            </mesh>
+            <mesh rotation-x={-Math.PI / 2} position={[0, 0.045, 0]}>
+              <ringGeometry args={[lounge.radius - 0.35, lounge.radius, 128]} />
+              <meshStandardMaterial color={lounge.accent} transparent opacity={active ? 0.48 : 0.28} />
+            </mesh>
+            <Html position={[0, 1.15, -lounge.radius + 2.2]} center distanceFactor={18}>
+              <div className={`world-label district ${active ? "active" : ""}`}>
+                <strong>{lounge.name}</strong>
+                <span>{lounge.districtName}</span>
+              </div>
+            </Html>
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -475,7 +508,7 @@ function CityFurniture() {
   );
 }
 
-function HubSign({ lounge }: { lounge: Lounge }) {
+function HubSign() {
   return (
     <group position={[0, 0, -20]}>
       <mesh castShadow receiveShadow position={[0, 2.4, 0]}>
@@ -490,12 +523,12 @@ function HubSign({ lounge }: { lounge: Lounge }) {
         <boxGeometry args={[0.25, 2.7, 0.25]} />
         <meshStandardMaterial color="#59625c" />
       </mesh>
-      <Text position={[0, 2.82, 0.18]} fontSize={0.52} maxWidth={8.7} color="#17201d" anchorX="center" anchorY="middle">
-        {lounge.name}
-      </Text>
-      <Text position={[0, 2.05, 0.18]} fontSize={0.22} maxWidth={8.4} color="#52615c" anchorX="center" anchorY="middle">
-        {lounge.prompt}
-      </Text>
+      <Html position={[0, 2.48, 0.22]} center distanceFactor={12}>
+        <div className="world-label sign">
+          <strong>Human Connect</strong>
+          <span>창업, 개발, 디자인 구역이 이어진 열린 도시</span>
+        </div>
+      </Html>
     </group>
   );
 }
@@ -515,9 +548,9 @@ function Stage({ accent }: { accent: string }) {
         <sphereGeometry args={[0.24, 20, 20]} />
         <meshStandardMaterial color="#222725" roughness={0.2} />
       </mesh>
-      <Text position={[0, 1.2, -1.15]} rotation-x={-0.2} fontSize={0.34} color="#f7f4eb" anchorX="center">
-        오픈 피치 광장
-      </Text>
+      <Html position={[0, 1.25, -1.15]} center distanceFactor={14}>
+        <div className="world-label compact">오픈 피치 광장</div>
+      </Html>
     </group>
   );
 }
@@ -539,9 +572,9 @@ function PrivatePods() {
             <ringGeometry args={[2.35, 2.55, 72]} />
             <meshStandardMaterial color="#f6edd4" transparent opacity={0.55} />
           </mesh>
-          <Text position={[0, 2.05, 0]} fontSize={0.28} color="#f7f4eb" anchorX="center">
-            1:1 조용한 포드
-          </Text>
+          <Html position={[0, 2.05, 0]} center distanceFactor={14}>
+            <div className="world-label compact">1:1 조용한 포드</div>
+          </Html>
         </group>
       ))}
     </group>
@@ -587,12 +620,12 @@ function TopicTableMesh({ table }: { table: TopicTable }) {
         <circleGeometry args={[4.85, 72]} />
         <meshStandardMaterial color={table.color} transparent opacity={0.08} />
       </mesh>
-      <Text position={[0, 1.75, 0]} fontSize={0.34} maxWidth={4.6} color="#ffffff" anchorX="center">
-        {table.label}
-      </Text>
-      <Text position={[0, 1.28, 0]} fontSize={0.18} maxWidth={4.8} color="#f8f4ea" anchorX="center">
-        {table.occupied}/{table.seats} 착석 - 근처에서 E
-      </Text>
+      <Html position={[0, 1.65, 0]} center distanceFactor={12}>
+        <div className="world-label table">
+          <strong>{table.label}</strong>
+          <span>{table.occupied}/{table.seats} 착석 · 근처에서 E</span>
+        </div>
+      </Html>
     </group>
   );
 }
@@ -718,17 +751,19 @@ function HumanoidAvatar({
         <boxGeometry args={[0.38, 0.08, 0.05]} />
         <meshStandardMaterial color="#f8f4ea" />
       </mesh>
-      <Text position={[0, 2.38, 0]} fontSize={0.24} color="#ffffff" anchorX="center">
-        {name}
-      </Text>
+      <Html position={[0, 2.38, 0]} center distanceFactor={10}>
+        <div className="world-label name">{name}</div>
+      </Html>
     </group>
   );
 }
 
-function Player({ lounge, onSelectGuest }: LoungeWorldProps) {
+function Player({ lounges, onSelectGuest }: LoungeWorldProps) {
   const ref = useRef<THREE.Group>(null);
   const lastSync = useRef(0);
   const movingRef = useRef(false);
+  const tables = useMemo(() => lounges.flatMap((lounge) => lounge.tables), [lounges]);
+  const guests = useMemo(() => lounges.flatMap((lounge) => lounge.guests), [lounges]);
   const nickname = useLoungeStore((state) => state.nickname);
   const wave = useLoungeStore((state) => state.wave);
   const joinTable = useLoungeStore((state) => state.joinTable);
@@ -745,8 +780,8 @@ function Player({ lounge, onSelectGuest }: LoungeWorldProps) {
       if (event.code === "Space") wave();
       if (event.key.toLowerCase() === "e" && ref.current) {
         const position = ref.current.position;
-        const nearestGuest = getNearest(lounge.guests, position);
-        const nearestTable = getNearest(lounge.tables, position);
+        const nearestGuest = getNearest(guests, position);
+        const nearestTable = getNearest(tables, position);
 
         if (nearestGuest && nearestGuest.distance <= INTERACTION_RADIUS) {
           onSelectGuest(nearestGuest.item);
@@ -766,7 +801,7 @@ function Player({ lounge, onSelectGuest }: LoungeWorldProps) {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
     };
-  }, [joinTable, lounge, onSelectGuest, wave]);
+  }, [guests, joinTable, onSelectGuest, tables, wave]);
 
   useFrame(({ clock }, delta) => {
     if (!ref.current) return;
@@ -789,7 +824,7 @@ function Player({ lounge, onSelectGuest }: LoungeWorldProps) {
 
     const nextX = ref.current.position.x + velocity.x * delta;
     const nextZ = ref.current.position.z + velocity.z * delta;
-    const colliders = getWorldColliders(lounge);
+    const colliders = getWorldColliders(lounges);
 
     if (!hitsCollider(nextX, ref.current.position.z, colliders)) {
       ref.current.position.x = THREE.MathUtils.clamp(nextX, -WORLD_LIMIT, WORLD_LIMIT);
@@ -879,7 +914,7 @@ function getNearest<T extends { position: Vector3Tuple }>(items: T[], position: 
   }, null);
 }
 
-function getWorldColliders(lounge: Lounge): Collider[] {
+function getWorldColliders(lounges: Lounge[]): Collider[] {
   const buildingColliders = buildingSpecs.map(([x, z, w, , d]) => ({
     x,
     z,
@@ -887,14 +922,17 @@ function getWorldColliders(lounge: Lounge): Collider[] {
     halfZ: d / 2 + 0.75
   }));
 
-  const tableColliders = lounge.tables.map((table) => ({
+  const tables = lounges.flatMap((lounge) => lounge.tables);
+  const guests = lounges.flatMap((lounge) => lounge.guests);
+
+  const tableColliders = tables.map((table) => ({
     x: table.position[0],
     z: table.position[2],
     halfX: 2.7,
     halfZ: 2.7
   }));
 
-  const guestColliders = lounge.guests.map((guest) => ({
+  const guestColliders = guests.map((guest) => ({
     x: guest.position[0],
     z: guest.position[2],
     halfX: 0.9,

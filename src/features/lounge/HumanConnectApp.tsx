@@ -1,13 +1,15 @@
 "use client";
 
-import { Flag, Hand, Mic, MicOff, Shield, UserRound, Users, X } from "lucide-react";
+import { Flag, Hand, Map, Mic, MicOff, Shield, UserRound, Users, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { getLounge, lounges, type Guest } from "./loungeData";
+import type { CSSProperties } from "react";
+import { allGuests, allTables, getLounge, getLoungeForTable, lounges, type Guest, type Lounge } from "./loungeData";
 import { useLoungeStore } from "./loungeStore";
 import { LoungeWorld } from "./LoungeWorld";
 
 const NEAR_GUEST_RADIUS = 5.2;
 const NEAR_TABLE_RADIUS = 6.8;
+const MAP_LIMIT = 92;
 
 export function HumanConnectApp() {
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
@@ -36,24 +38,28 @@ export function HumanConnectApp() {
     clearToast
   } = useLoungeStore();
 
-  const lounge = useMemo(() => getLounge(loungeId), [loungeId]);
-  const currentTable = lounge.tables.find((table) => table.id === currentTableId);
-  const privateGuest = lounge.guests.find((guest) => guest.id === privateGuestId);
+  const activeDistrict = useMemo(() => getLounge(loungeId), [loungeId]);
+  const currentTable = allTables.find((table) => table.id === currentTableId);
+  const currentTableDistrict = currentTable ? getLoungeForTable(currentTable.id) : null;
+  const privateGuest = allGuests.find((guest) => guest.id === privateGuestId);
+  const focusedTables = activeDistrict.tables;
+
+  const nearestDistrict = useMemo(() => getNearestDistrict(playerPosition), [playerPosition]);
   const nearbyGuests = useMemo(
     () =>
-      lounge.guests
+      allGuests
         .map((guest) => ({ guest, distance: planarDistance(playerPosition, guest.position) }))
         .sort((a, b) => a.distance - b.distance),
-    [lounge.guests, playerPosition]
+    [playerPosition]
   );
   const closestGuest = nearbyGuests.find((item) => item.distance <= NEAR_GUEST_RADIUS);
   const closestTable = useMemo(
     () =>
-      lounge.tables
+      allTables
         .map((table) => ({ table, distance: planarDistance(playerPosition, table.position) }))
         .sort((a, b) => a.distance - b.distance)
         .find((item) => item.distance <= NEAR_TABLE_RADIUS),
-    [lounge.tables, playerPosition]
+    [playerPosition]
   );
 
   useEffect(() => {
@@ -74,24 +80,25 @@ export function HumanConnectApp() {
   return (
     <main className="app-shell">
       <div className="world-canvas">
-        <LoungeWorld lounge={lounge} onSelectGuest={setSelectedGuest} />
+        <LoungeWorld activeLounge={activeDistrict} lounges={lounges} onSelectGuest={setSelectedGuest} />
       </div>
 
       <header className="topbar">
         <section className="brand-panel" aria-label="Human Connect">
           <h1>Human Connect</h1>
-          <p>{lounge.prompt}</p>
+          <p>하나의 도시 안에서 관심사가 맞는 사람들이 우연히 만나 진짜 대화를 시작합니다.</p>
         </section>
 
-        <nav className="lounge-tabs" aria-label="라운지 선택">
+        <nav className="lounge-tabs" aria-label="도시 구역 선택">
           {lounges.map((item) => (
             <button
-              className={`tab-button ${item.id === lounge.id ? "active" : ""}`}
+              className={`tab-button ${item.id === activeDistrict.id ? "active" : ""}`}
               key={item.id}
               onClick={() => setLounge(item.id)}
               type="button"
+              style={{ "--district": item.accent } as CSSProperties}
             >
-              <Users size={16} aria-hidden />
+              <Map size={16} aria-hidden />
               {item.name}
             </button>
           ))}
@@ -104,8 +111,8 @@ export function HumanConnectApp() {
               <strong>{getModeLabel(mode)}</strong>
             </div>
             <div>
-              <span>인원</span>
-              <strong>{lounge.guests.length + 1}</strong>
+              <span>도시 인원</span>
+              <strong>{allGuests.length + 1}</strong>
             </div>
             <div>
               <span>마이크</span>
@@ -115,11 +122,11 @@ export function HumanConnectApp() {
         </section>
       </header>
 
-      <aside className="side-panel" aria-label="대화 조작 패널">
+      <aside className="side-panel" aria-label="도시 조작 패널">
         <div className="panel-header">
           <div>
-            <h2>{lounge.name}</h2>
-            <p>{lounge.tone}</p>
+            <h2>{activeDistrict.name}</h2>
+            <p>{activeDistrict.districtName} · {activeDistrict.tone}</p>
           </div>
           <button className="icon-button" onClick={() => wave()} type="button" title="손 흔들기">
             <Hand size={18} aria-hidden />
@@ -150,21 +157,21 @@ export function HumanConnectApp() {
             {closestGuest
               ? `${closestGuest.guest.name}님이 근처에 있습니다`
               : closestTable
-                ? `${closestTable.table.label}이 근처에 있습니다`
-                : "도시를 둘러보세요"}
+                ? `${closestTable.table.label} 근처에 있습니다`
+                : `${nearestDistrict.name} 방향을 지나고 있습니다`}
           </strong>
           <span>
             {closestGuest
               ? "E 키를 누르거나 카드를 열어 손 흔들기, 1:1 포드 요청, 신고, 차단을 할 수 있습니다."
               : closestTable
-                ? "E 키를 누르거나 구역을 클릭하면 이 주제 테이블에 앉습니다."
-                : "열린 광장을 걸어보세요. 사람이나 테이블에 가까워지면 상호작용이 열립니다."}
+                ? "E 키를 누르거나 테이블 카드를 클릭하면 해당 주제 대화에 착석합니다."
+                : "창업, 개발, 디자인 구역이 한 맵에 있습니다. 미니맵을 보며 관심 구역으로 이동하세요."}
           </span>
         </div>
 
-        <h3 className="section-title">주제 테이블</h3>
+        <h3 className="section-title">선택 구역 테이블</h3>
         <div className="table-list">
-          {lounge.tables.map((table) => (
+          {focusedTables.map((table) => (
             <button
               className={`table-button ${table.id === currentTableId ? "active" : ""}`}
               key={table.id}
@@ -176,16 +183,16 @@ export function HumanConnectApp() {
                 <p>{table.topic}</p>
                 <div className="table-meta">
                   <span className="pill">{table.occupied}/{table.seats} 착석</span>
-                  <span className="pill">음성 구역</span>
+                  <span className="pill">{activeDistrict.districtName}</span>
                 </div>
               </div>
             </button>
           ))}
         </div>
 
-        <h3 className="section-title">근처 사람들</h3>
+        <h3 className="section-title">도시 근처 사람들</h3>
         <div className="people-list">
-          {nearbyGuests.map(({ guest, distance }) => (
+          {nearbyGuests.slice(0, 6).map(({ guest, distance }) => (
             <button
               className={`person-card ${distance <= NEAR_GUEST_RADIUS ? "near" : ""}`}
               key={guest.id}
@@ -193,7 +200,7 @@ export function HumanConnectApp() {
               type="button"
             >
               <strong>{guest.name}</strong>
-              <span>{guest.role}</span>
+              <span>{getLounge(guest.loungeId).name} · {guest.role}</span>
               <div className="person-meta">
                 <span className="pill">{distance.toFixed(1)}m</span>
                 {guest.interests.map((interest) => (
@@ -206,6 +213,8 @@ export function HumanConnectApp() {
           ))}
         </div>
       </aside>
+
+      <MiniMap activeDistrict={activeDistrict} playerPosition={playerPosition} />
 
       <section className="entry-panel" aria-label="게스트 프로필">
         <div className="panel-header">
@@ -238,7 +247,7 @@ export function HumanConnectApp() {
         <section className="conversation-dock" aria-label="선택한 사람">
           <div>
             <strong>{selectedGuest.name}</strong>
-            <span>{selectedGuest.role} · {selectedGuest.interests.join(", ")}</span>
+            <span>{getLounge(selectedGuest.loungeId).name} · {selectedGuest.role} · {selectedGuest.interests.join(", ")}</span>
           </div>
           <div className="control-row">
             <button className="action-button primary" onClick={() => requestPrivate(selectedGuest.id, selectedGuest.name)} type="button">
@@ -268,7 +277,7 @@ export function HumanConnectApp() {
         <section className="conversation-dock" aria-live="polite">
           <div>
             <strong>{currentTable.label}</strong>
-            <span>{currentTable.topic}</span>
+            <span>{currentTableDistrict?.name ?? "도시"} · {currentTable.topic}</span>
           </div>
           <button className="seat-button active" onClick={leaveTable} type="button">
             착석 중
@@ -288,9 +297,54 @@ export function HumanConnectApp() {
         </section>
       ) : null}
 
-      <div className="hud-help">WASD 이동 · 화살표 시점 전환 후 자동 복귀 · E 근접 상호작용 · Space 손 흔들기</div>
+      <div className="hud-help">W/S 전후진 · A/D 방향 전환 · 화살표 시점 전환 후 자동 복귀 · E 근접 상호작용 · Space 손 흔들기</div>
       {toast ? <div className="toast">{toast}</div> : null}
     </main>
+  );
+}
+
+function MiniMap({ activeDistrict, playerPosition }: { activeDistrict: Lounge; playerPosition: [number, number, number] }) {
+  const toMapStyle = (x: number, z: number) => ({
+    left: `${((x + MAP_LIMIT) / (MAP_LIMIT * 2)) * 100}%`,
+    top: `${((MAP_LIMIT - z) / (MAP_LIMIT * 2)) * 100}%`
+  });
+
+  return (
+    <section className="mini-map" aria-label="도시 미니맵">
+      <div className="mini-map-header">
+        <strong>도시 미니맵</strong>
+        <span>{activeDistrict.name}</span>
+      </div>
+      <div className="mini-map-canvas">
+        <span className="map-road vertical" />
+        <span className="map-road horizontal" />
+        {lounges.map((lounge) => (
+          <button
+            className={`map-district ${lounge.id === activeDistrict.id ? "active" : ""}`}
+            key={lounge.id}
+            onClick={() => useLoungeStore.getState().setLounge(lounge.id)}
+            style={{
+              ...toMapStyle(lounge.center[0], lounge.center[2]),
+              width: `${(lounge.radius / MAP_LIMIT) * 100}%`,
+              height: `${(lounge.radius / MAP_LIMIT) * 100}%`,
+              "--district": lounge.accent
+            } as CSSProperties}
+            type="button"
+            title={lounge.name}
+          >
+            <span>{lounge.name.replace(" 구역", "")}</span>
+          </button>
+        ))}
+        {allTables.map((table) => (
+          <span
+            className="map-table"
+            key={table.id}
+            style={{ ...toMapStyle(table.position[0], table.position[2]), background: table.color }}
+          />
+        ))}
+        <span className="map-player" style={toMapStyle(playerPosition[0], playerPosition[2])} />
+      </div>
+    </section>
   );
 }
 
@@ -298,6 +352,12 @@ function planarDistance(a: [number, number, number], b: [number, number, number]
   const dx = a[0] - b[0];
   const dz = a[2] - b[2];
   return Math.sqrt(dx * dx + dz * dz);
+}
+
+function getNearestDistrict(position: [number, number, number]) {
+  return lounges
+    .map((lounge) => ({ lounge, distance: planarDistance(position, lounge.center) }))
+    .sort((a, b) => a.distance - b.distance)[0].lounge;
 }
 
 function getModeLabel(mode: string) {

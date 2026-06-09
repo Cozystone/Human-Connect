@@ -39,7 +39,7 @@ export const useLoungeStore = create<LoungeState>((set, get) => ({
   playerPosition: [0, 0, 7],
   muted: false,
   blockedGuestIds: [],
-  toast: "라운지를 고르고 WASD로 걸어보세요. 관심사가 맞는 테이블에 앉을 수 있습니다.",
+  toast: "하나의 도시 안에 창업, 개발, 디자인 구역이 열려 있습니다. WASD로 걸어보세요.",
   mode: "floor",
   setLounge: (loungeId) =>
     set({
@@ -47,13 +47,13 @@ export const useLoungeStore = create<LoungeState>((set, get) => ({
       currentTableId: null,
       privateGuestId: null,
       mode: "floor",
-      toast: "새 라운지에 입장했습니다. 지금 가장 끌리는 테이블을 찾아보세요."
+      toast: "선택한 구역 정보를 열었습니다. 미니맵을 보며 직접 걸어가 보세요."
     }),
   enterAsGuest: (nickname, interests) =>
     set({
       nickname: nickname.trim() || "익명 빌더",
-      interests: interests.length ? interests : ["호기심"],
-      toast: "게스트 프로필을 업데이트했습니다. 대화가 자연스러워질 때까지 익명으로 머물 수 있어요."
+      interests: interests.length ? interests : ["관심사"],
+      toast: "게스트 프로필을 저장했습니다. 도시 안에서는 가까운 사람과 테이블이 먼저 열립니다."
     }),
   setPlayerPosition: (playerPosition) => set({ playerPosition }),
   joinTable: (tableId) =>
@@ -61,13 +61,13 @@ export const useLoungeStore = create<LoungeState>((set, get) => ({
       currentTableId: tableId,
       privateGuestId: null,
       mode: "table",
-      toast: "자리에 앉았습니다. 이제 이 주제의 음성 구역과 테이블 맥락에 집중합니다."
+      toast: "테이블에 착석했습니다. 같은 주제를 바라보는 사람들과 대화를 시작하세요."
     }),
   leaveTable: () =>
     set({
       currentTableId: null,
       mode: "floor",
-      toast: "테이블에서 잠시 벗어났습니다."
+      toast: "테이블에서 일어났습니다. 다른 구역으로 걸어가도 됩니다."
     }),
   requestPrivate: (guestId, guestName) => {
     if (get().blockedGuestIds.includes(guestId)) {
@@ -86,7 +86,7 @@ export const useLoungeStore = create<LoungeState>((set, get) => ({
     set({
       privateGuestId: null,
       mode: "floor",
-      toast: "1:1 포드에서 공개 라운지로 돌아왔습니다."
+      toast: "1:1 포드에서 공개 도시로 돌아왔습니다."
     }),
   toggleMute: () =>
     set((state) => ({
@@ -106,7 +106,7 @@ export const useLoungeStore = create<LoungeState>((set, get) => ({
     }),
   wave: (guestName) =>
     set({
-      toast: guestName ? `${guestName}님에게 손을 흔들었습니다.` : "라운지에 가볍게 손을 흔들었습니다."
+      toast: guestName ? `${guestName}님에게 손을 흔들었습니다.` : "도시에 가볍게 손을 흔들었습니다."
     }),
   clearToast: () => set({ toast: null })
 }));
