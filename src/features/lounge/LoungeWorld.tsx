@@ -13,26 +13,99 @@ type LoungeWorldProps = {
 };
 
 const keys = new Set<string>();
-const WORLD_LIMIT = 42;
+const WORLD_LIMIT = 92;
 const INTERACTION_RADIUS = 5.2;
+const PLAYER_RADIUS = 0.55;
+
+type Collider = {
+  x: number;
+  z: number;
+  halfX: number;
+  halfZ: number;
+};
+
+const treePositions: Vector3Tuple[] = [
+  [-44, 0, -42],
+  [-28, 0, -46],
+  [-10, 0, -50],
+  [18, 0, -48],
+  [42, 0, -38],
+  [52, 0, -12],
+  [48, 0, 22],
+  [34, 0, 48],
+  [5, 0, 55],
+  [-24, 0, 52],
+  [-50, 0, 30],
+  [-56, 0, -8],
+  [-18, 0, 9],
+  [-6, 0, 14],
+  [10, 0, 10],
+  [20, 0, 6],
+  [-22, 0, -15],
+  [20, 0, -16]
+];
+
+const benchPositions: Vector3Tuple[] = [
+  [-5, 0, 5],
+  [7, 0, 5],
+  [-16, 0, -1],
+  [17, 0, 2],
+  [-33, 0, 12],
+  [35, 0, -8],
+  [-12, 0, 33],
+  [28, 0, 29]
+];
+
+const buildingSpecs = [
+  [-72, -56, 9, 18, 8, "#687873"],
+  [-55, -74, 12, 28, 10, "#7b8379"],
+  [-30, -64, 10, 17, 8, "#586b72"],
+  [36, -76, 13, 32, 12, "#697d87"],
+  [69, -48, 11, 24, 10, "#6e756d"],
+  [-78, 40, 12, 23, 12, "#7a8278"],
+  [-48, 67, 14, 34, 10, "#596f70"],
+  [35, 68, 11, 21, 12, "#777b70"],
+  [68, 46, 14, 31, 13, "#637276"],
+  [-66, -6, 9, 16, 9, "#66736e"],
+  [63, 4, 10, 20, 10, "#5d7078"],
+  [-4, -76, 16, 26, 9, "#727d76"],
+  [2, 75, 18, 30, 10, "#637276"]
+] as const;
+
+const podPositions: Vector3Tuple[] = [
+  [-46, 0, 34],
+  [52, 0, 32],
+  [0, 0, 66]
+];
 
 export function LoungeWorld({ lounge, onSelectGuest }: LoungeWorldProps) {
   return (
-    <Canvas shadows camera={{ position: [0, 9, 13], fov: 48 }} dpr={[1, 1.65]}>
-      <color attach="background" args={["#8fb6bd"]} />
-      <fog attach="fog" args={["#8fb6bd", 28, 82]} />
-      <ambientLight intensity={0.78} />
-      <hemisphereLight args={["#cfe8ec", "#59685d", 0.7]} />
+    <Canvas
+      shadows
+      camera={{ position: [0, 10, 14], fov: 48 }}
+      dpr={[1, 1.85]}
+      gl={{ antialias: true, powerPreference: "high-performance" }}
+      onCreated={({ gl }) => {
+        gl.toneMapping = THREE.ACESFilmicToneMapping;
+        gl.toneMappingExposure = 1.05;
+        gl.shadowMap.enabled = true;
+        gl.shadowMap.type = THREE.PCFSoftShadowMap;
+      }}
+    >
+      <color attach="background" args={["#a8c7cd"]} />
+      <fog attach="fog" args={["#a8c7cd", 48, 155]} />
+      <ambientLight intensity={0.48} />
+      <hemisphereLight args={["#dceff1", "#47554e", 0.64]} />
       <directionalLight
         castShadow
-        position={[18, 28, 15]}
-        intensity={1.5}
-        shadow-camera-left={-45}
-        shadow-camera-right={45}
-        shadow-camera-top={45}
-        shadow-camera-bottom={-45}
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        position={[35, 52, 28]}
+        intensity={2.15}
+        shadow-camera-left={-105}
+        shadow-camera-right={105}
+        shadow-camera-top={105}
+        shadow-camera-bottom={-105}
+        shadow-mapSize-width={4096}
+        shadow-mapSize-height={4096}
       />
       <Environment preset="city" />
       <OpenCity lounge={lounge} onSelectGuest={onSelectGuest} />
@@ -68,15 +141,15 @@ function Ground() {
   return (
     <group>
       <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, -0.04, 0]}>
-        <planeGeometry args={[96, 96]} />
+        <planeGeometry args={[200, 200]} />
         <meshStandardMaterial color="#96a889" roughness={0.94} />
       </mesh>
       <mesh receiveShadow rotation-x={-Math.PI / 2} position={[0, -0.03, 0]}>
-        <circleGeometry args={[24, 96]} />
+        <circleGeometry args={[38, 128]} />
         <meshStandardMaterial color="#d7d0bc" roughness={0.86} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.01, 0]}>
-        <ringGeometry args={[23.8, 24.2, 128]} />
+        <ringGeometry args={[37.7, 38.3, 128]} />
         <meshStandardMaterial color="#6f8178" roughness={0.75} />
       </mesh>
     </group>
@@ -86,30 +159,30 @@ function Ground() {
 function RoadGrid() {
   return (
     <group>
-      {[-30, 0, 30].map((x) => (
+      {[-72, -36, 0, 36, 72].map((x) => (
         <mesh key={`road-x-${x}`} receiveShadow rotation-x={-Math.PI / 2} position={[x, 0, 0]}>
-          <planeGeometry args={[5, 96]} />
+          <planeGeometry args={[6, 196]} />
           <meshStandardMaterial color="#59625c" roughness={0.8} />
         </mesh>
       ))}
-      {[-30, 0, 30].map((z) => (
+      {[-72, -36, 0, 36, 72].map((z) => (
         <mesh key={`road-z-${z}`} receiveShadow rotation-x={-Math.PI / 2} position={[0, 0.01, z]}>
-          <planeGeometry args={[96, 5]} />
+          <planeGeometry args={[196, 6]} />
           <meshStandardMaterial color="#59625c" roughness={0.8} />
         </mesh>
       ))}
-      {[-30, 0, 30].flatMap((line) =>
-        [-1.15, 1.15].map((offset) => (
+      {[-72, -36, 0, 36, 72].flatMap((line) =>
+        [-1.45, 1.45].map((offset) => (
           <mesh key={`lane-a-${line}-${offset}`} rotation-x={-Math.PI / 2} position={[line + offset, 0.025, 0]}>
-            <planeGeometry args={[0.08, 92]} />
+            <planeGeometry args={[0.08, 188]} />
             <meshStandardMaterial color="#d8cfad" roughness={0.6} />
           </mesh>
         ))
       )}
-      {[-30, 0, 30].flatMap((line) =>
-        [-1.15, 1.15].map((offset) => (
+      {[-72, -36, 0, 36, 72].flatMap((line) =>
+        [-1.45, 1.45].map((offset) => (
           <mesh key={`lane-b-${line}-${offset}`} rotation-x={-Math.PI / 2} position={[0, 0.03, line + offset]}>
-            <planeGeometry args={[92, 0.08]} />
+            <planeGeometry args={[188, 0.08]} />
             <meshStandardMaterial color="#d8cfad" roughness={0.6} />
           </mesh>
         ))
@@ -119,28 +192,17 @@ function RoadGrid() {
 }
 
 function Skyline({ accent }: { accent: string }) {
-  const buildings = useMemo(
-    () => [
-      [-36, -24, 5, 10, 5, "#687873"],
-      [-27, -34, 7, 15, 6, "#7b8379"],
-      [-16, -31, 5, 8, 5, "#586b72"],
-      [22, -35, 8, 18, 7, "#697d87"],
-      [35, -22, 6, 13, 6, "#6e756d"],
-      [-38, 18, 7, 12, 8, "#7a8278"],
-      [-24, 31, 8, 18, 6, "#596f70"],
-      [18, 32, 6, 11, 7, "#777b70"],
-      [33, 23, 8, 16, 8, "#637276"]
-    ] as const,
-    []
-  );
-
   return (
     <group>
-      {buildings.map(([x, z, w, h, d, color], index) => (
+      {buildingSpecs.map(([x, z, w, h, d, color], index) => (
         <group key={`${x}-${z}`} position={[x, 0, z]}>
           <mesh castShadow receiveShadow position={[0, h / 2, 0]}>
             <boxGeometry args={[w, h, d]} />
-            <meshStandardMaterial color={index % 3 === 0 ? accent : color} roughness={0.82} metalness={0.03} />
+            <meshStandardMaterial color={index % 4 === 0 ? accent : color} roughness={0.62} metalness={0.08} />
+          </mesh>
+          <mesh position={[0, h + 0.08, 0]}>
+            <boxGeometry args={[w * 0.78, 0.16, d * 0.78]} />
+            <meshStandardMaterial color="#d4ddd7" roughness={0.48} metalness={0.18} />
           </mesh>
           {Array.from({ length: Math.floor(h / 2) }).map((_, floor) => (
             <mesh key={floor} position={[0, 1.5 + floor * 2, d / 2 + 0.015]}>
@@ -157,31 +219,19 @@ function Skyline({ accent }: { accent: string }) {
 function CityFurniture() {
   return (
     <group>
-      {[
-        [-18, 0, 9],
-        [-6, 0, 14],
-        [10, 0, 10],
-        [20, 0, 6],
-        [-22, 0, -15],
-        [20, 0, -16]
-      ].map(([x, y, z], index) => (
+      {treePositions.map(([x, y, z], index) => (
         <group key={index} position={[x, y, z]}>
           <mesh castShadow position={[0, 1.2, 0]}>
             <cylinderGeometry args={[0.15, 0.2, 2.4, 14]} />
             <meshStandardMaterial color="#5a4e40" roughness={0.8} />
           </mesh>
           <mesh castShadow position={[0, 2.7, 0]}>
-            <coneGeometry args={[1.2, 2.5, 12]} />
-            <meshStandardMaterial color="#416c4c" roughness={0.88} />
+            <coneGeometry args={[1.35, 2.7, 14]} />
+            <meshStandardMaterial color={index % 3 === 0 ? "#3f6348" : "#416c4c"} roughness={0.78} />
           </mesh>
         </group>
       ))}
-      {[
-        [-5, 0, 5],
-        [7, 0, 5],
-        [-16, 0, -1],
-        [17, 0, 2]
-      ].map(([x, y, z], index) => (
+      {benchPositions.map(([x, y, z], index) => (
         <group key={`bench-${index}`} position={[x, y, z]} rotation-y={index % 2 ? Math.PI / 2 : 0}>
           <mesh castShadow position={[0, 0.35, 0]}>
             <boxGeometry args={[2.5, 0.22, 0.55]} />
@@ -251,11 +301,7 @@ function Stage({ accent }: { accent: string }) {
 function PrivatePods() {
   return (
     <group>
-      {[
-        [-22, 0, 16],
-        [24, 0, 15],
-        [0, 0, 32]
-      ].map(([x, y, z], index) => (
+      {podPositions.map(([x, y, z], index) => (
         <group key={index} position={[x, y, z]}>
           <mesh castShadow receiveShadow position={[0, 0.08, 0]}>
             <cylinderGeometry args={[2.25, 2.25, 0.16, 64]} />
@@ -498,10 +544,10 @@ function Player({ lounge, onSelectGuest }: LoungeWorldProps) {
   useFrame(({ clock }, delta) => {
     if (!ref.current) return;
     direction.set(0, 0, 0);
-    if (keys.has("w") || keys.has("arrowup")) direction.z -= 1;
-    if (keys.has("s") || keys.has("arrowdown")) direction.z += 1;
-    if (keys.has("a") || keys.has("arrowleft")) direction.x -= 1;
-    if (keys.has("d") || keys.has("arrowright")) direction.x += 1;
+    if (keys.has("w")) direction.z -= 1;
+    if (keys.has("s")) direction.z += 1;
+    if (keys.has("a")) direction.x -= 1;
+    if (keys.has("d")) direction.x += 1;
 
     movingRef.current = direction.lengthSq() > 0;
 
@@ -514,9 +560,21 @@ function Player({ lounge, onSelectGuest }: LoungeWorldProps) {
       velocity.lerp(new THREE.Vector3(0, 0, 0), 0.14);
     }
 
-    ref.current.position.addScaledVector(velocity, delta);
-    ref.current.position.x = THREE.MathUtils.clamp(ref.current.position.x, -WORLD_LIMIT, WORLD_LIMIT);
-    ref.current.position.z = THREE.MathUtils.clamp(ref.current.position.z, -WORLD_LIMIT, WORLD_LIMIT);
+    const nextX = ref.current.position.x + velocity.x * delta;
+    const nextZ = ref.current.position.z + velocity.z * delta;
+    const colliders = getWorldColliders(lounge);
+
+    if (!hitsCollider(nextX, ref.current.position.z, colliders)) {
+      ref.current.position.x = THREE.MathUtils.clamp(nextX, -WORLD_LIMIT, WORLD_LIMIT);
+    } else {
+      velocity.x = 0;
+    }
+
+    if (!hitsCollider(ref.current.position.x, nextZ, colliders)) {
+      ref.current.position.z = THREE.MathUtils.clamp(nextZ, -WORLD_LIMIT, WORLD_LIMIT);
+    } else {
+      velocity.z = 0;
+    }
 
     if (clock.elapsedTime - lastSync.current > 0.18) {
       lastSync.current = clock.elapsedTime;
@@ -535,14 +593,38 @@ function CameraRig() {
   const { camera, scene } = useThree();
   const target = useMemo(() => new THREE.Vector3(), []);
   const desired = useMemo(() => new THREE.Vector3(), []);
+  const yaw = useRef(0);
+  const pitch = useRef(0);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     const player = scene.getObjectByName("local-player");
     if (!player) return;
+
+    const yawInput = (keys.has("arrowleft") ? 1 : 0) + (keys.has("arrowright") ? -1 : 0);
+    const pitchInput = (keys.has("arrowup") ? 1 : 0) + (keys.has("arrowdown") ? -1 : 0);
+
+    if (yawInput !== 0) {
+      yaw.current = THREE.MathUtils.clamp(yaw.current + yawInput * delta * 1.65, -1.1, 1.1);
+    } else {
+      yaw.current = THREE.MathUtils.damp(yaw.current, 0, 5.2, delta);
+    }
+
+    if (pitchInput !== 0) {
+      pitch.current = THREE.MathUtils.clamp(pitch.current + pitchInput * delta * 0.85, -0.45, 0.55);
+    } else {
+      pitch.current = THREE.MathUtils.damp(pitch.current, 0, 5.2, delta);
+    }
+
     target.copy(player.position);
-    desired.set(target.x, target.y + 8.2, target.z + 12.2);
+    const radius = 14.5;
+    const height = 8.4 + pitch.current * 6;
+    desired.set(
+      target.x + Math.sin(yaw.current) * radius,
+      target.y + height,
+      target.z + Math.cos(yaw.current) * radius
+    );
     camera.position.lerp(desired, 0.075);
-    camera.lookAt(target.x, target.y + 1.25, target.z - 1.2);
+    camera.lookAt(target.x, target.y + 1.35, target.z - 1.2);
   });
 
   return null;
@@ -560,4 +642,67 @@ function getNearest<T extends { position: Vector3Tuple }>(items: T[], position: 
     if (!nearest || distance < nearest.distance) return { item, distance };
     return nearest;
   }, null);
+}
+
+function getWorldColliders(lounge: Lounge): Collider[] {
+  const buildingColliders = buildingSpecs.map(([x, z, w, , d]) => ({
+    x,
+    z,
+    halfX: w / 2 + 0.75,
+    halfZ: d / 2 + 0.75
+  }));
+
+  const tableColliders = lounge.tables.map((table) => ({
+    x: table.position[0],
+    z: table.position[2],
+    halfX: 2.7,
+    halfZ: 2.7
+  }));
+
+  const guestColliders = lounge.guests.map((guest) => ({
+    x: guest.position[0],
+    z: guest.position[2],
+    halfX: 0.9,
+    halfZ: 0.9
+  }));
+
+  const treeColliders = treePositions.map(([x, , z]) => ({
+    x,
+    z,
+    halfX: 0.9,
+    halfZ: 0.9
+  }));
+
+  const benchColliders = benchPositions.map(([x, , z], index) => ({
+    x,
+    z,
+    halfX: index % 2 ? 0.65 : 1.45,
+    halfZ: index % 2 ? 1.45 : 0.65
+  }));
+
+  const podColliders = podPositions.map(([x, , z]) => ({
+    x,
+    z,
+    halfX: 2.8,
+    halfZ: 2.8
+  }));
+
+  return [
+    ...buildingColliders,
+    ...tableColliders,
+    ...guestColliders,
+    ...treeColliders,
+    ...benchColliders,
+    ...podColliders,
+    { x: 0, z: 18, halfX: 6.2, halfZ: 2.6 },
+    { x: 0, z: -20, halfX: 5.5, halfZ: 0.9 }
+  ];
+}
+
+function hitsCollider(x: number, z: number, colliders: Collider[]) {
+  return colliders.some(
+    (collider) =>
+      Math.abs(x - collider.x) < collider.halfX + PLAYER_RADIUS &&
+      Math.abs(z - collider.z) < collider.halfZ + PLAYER_RADIUS
+  );
 }

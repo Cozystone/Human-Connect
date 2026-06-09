@@ -288,7 +288,7 @@ export function HumanConnectApp() {
         </section>
       ) : null}
 
-      <div className="hud-help">WASD 이동 · E 근접 상호작용 · 아바타/테이블 구역 클릭 · Space 손 흔들기</div>
+      <div className="hud-help">WASD 이동 · 화살표 시점 전환 후 자동 복귀 · E 근접 상호작용 · Space 손 흔들기</div>
       {toast ? <div className="toast">{toast}</div> : null}
     </main>
   );

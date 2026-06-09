@@ -44,7 +44,7 @@ export const lounges: Lounge[] = [
         topic: "MVP 범위와 첫 고객 반응",
         seats: 6,
         occupied: 4,
-        position: [-12, 0, -7],
+        position: [-24, 0, -18],
         color: "#2b8c73"
       },
       {
@@ -53,7 +53,7 @@ export const lounges: Lounge[] = [
         topic: "피치 명확도, 트랙션, 투자자 핏",
         seats: 5,
         occupied: 2,
-        position: [3, 0, -12],
+        position: [9, 0, -30],
         color: "#e1a13a"
       },
       {
@@ -62,7 +62,7 @@ export const lounges: Lounge[] = [
         topic: "공동창업자와 초기 협업자 찾기",
         seats: 6,
         occupied: 3,
-        position: [14, 0, -4],
+        position: [31, 0, -12],
         color: "#87b7c7"
       }
     ],
@@ -72,7 +72,7 @@ export const lounges: Lounge[] = [
         name: "Mina",
         role: "제품 창업자",
         interests: ["MVP", "AI 서비스", "B2B"],
-        position: [-9.5, 0, -4.2],
+        position: [-20, 0, -13.5],
         color: "#d97862"
       },
       {
@@ -80,7 +80,7 @@ export const lounges: Lounge[] = [
         name: "Jun",
         role: "디자인 파트너",
         interests: ["UX", "브랜드", "피드백"],
-        position: [8, 0, -1],
+        position: [23, 0, -4],
         color: "#5b8fb9"
       },
       {
@@ -88,7 +88,7 @@ export const lounges: Lounge[] = [
         name: "Ari",
         role: "엔젤 멘토",
         interests: ["트랙션", "피치", "네트워크"],
-        position: [18, 0, -8],
+        position: [39, 0, -20],
         color: "#9a6fb0"
       }
     ]
@@ -106,7 +106,7 @@ export const lounges: Lounge[] = [
         topic: "App Router, 배포, 성능",
         seats: 6,
         occupied: 5,
-        position: [-12, 0, -7],
+        position: [-24, 0, -18],
         color: "#3d78a5"
       },
       {
@@ -115,7 +115,7 @@ export const lounges: Lounge[] = [
         topic: "에이전트, 평가, 제품 워크플로",
         seats: 6,
         occupied: 3,
-        position: [3, 0, -12],
+        position: [9, 0, -30],
         color: "#2b8c73"
       },
       {
@@ -124,7 +124,7 @@ export const lounges: Lounge[] = [
         topic: "메인테이너, 기여자, 프로젝트 핏",
         seats: 5,
         occupied: 1,
-        position: [14, 0, -4],
+        position: [31, 0, -12],
         color: "#d18f35"
       }
     ],
@@ -134,7 +134,7 @@ export const lounges: Lounge[] = [
         name: "Nora",
         role: "프론트엔드 엔지니어",
         interests: ["React", "접근성", "R3F"],
-        position: [-9.5, 0, -4.2],
+        position: [-20, 0, -13.5],
         color: "#5b8fb9"
       },
       {
@@ -142,7 +142,7 @@ export const lounges: Lounge[] = [
         name: "Tae",
         role: "플랫폼 엔지니어",
         interests: ["인프라", "실시간", "DX"],
-        position: [8, 0, -1],
+        position: [23, 0, -4],
         color: "#61a675"
       },
       {
@@ -150,7 +150,7 @@ export const lounges: Lounge[] = [
         name: "Sol",
         role: "AI 앱 빌더",
         interests: ["에이전트", "음성", "평가"],
-        position: [18, 0, -8],
+        position: [39, 0, -20],
         color: "#9a6fb0"
       }
     ]
@@ -168,7 +168,7 @@ export const lounges: Lounge[] = [
         topic: "케이스 스터디, 강점, 발표 구성",
         seats: 5,
         occupied: 2,
-        position: [-12, 0, -7],
+        position: [-24, 0, -18],
         color: "#b15f73"
       },
       {
@@ -177,7 +177,7 @@ export const lounges: Lounge[] = [
         topic: "플로우, 위계, 마찰 지점",
         seats: 6,
         occupied: 4,
-        position: [3, 0, -12],
+        position: [9, 0, -30],
         color: "#2b8c73"
       },
       {
@@ -186,7 +186,7 @@ export const lounges: Lounge[] = [
         topic: "아이덴티티, 내러티브, 런칭 에셋",
         seats: 5,
         occupied: 3,
-        position: [14, 0, -4],
+        position: [31, 0, -12],
         color: "#e1a13a"
       }
     ],
@@ -196,7 +196,7 @@ export const lounges: Lounge[] = [
         name: "Yuna",
         role: "UX 디자이너",
         interests: ["플로우", "프로토타입", "리서치"],
-        position: [-9.5, 0, -4.2],
+        position: [-20, 0, -13.5],
         color: "#d97862"
       },
       {
@@ -204,7 +204,7 @@ export const lounges: Lounge[] = [
         name: "Kai",
         role: "브랜드 디자이너",
         interests: ["시스템", "런칭", "타이포그래피"],
-        position: [8, 0, -1],
+        position: [23, 0, -4],
         color: "#6f8cc7"
       },
       {
@@ -212,7 +212,7 @@ export const lounges: Lounge[] = [
         name: "Ren",
         role: "크리에이티브 테크놀로지스트",
         interests: ["모션", "3D", "설치 작업"],
-        position: [18, 0, -8],
+        position: [39, 0, -20],
         color: "#61a675"
       }
     ]
